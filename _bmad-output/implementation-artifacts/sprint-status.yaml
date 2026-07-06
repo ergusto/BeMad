@@ -56,7 +56,7 @@ development_status:
   1-4-edit-a-tasks-text-in-place: done
   1-5-toggle-completion-with-clear-status: done
   1-6-delete-a-task-with-confirmation: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # Epic 2: Instant & Polished Experience
   epic-2: backlog
@@ -81,3 +81,41 @@ development_status:
   4-3-security-performance-review: backlog
   4-4-delivery-documentation: backlog
   epic-4-retrospective: optional
+
+action_items:
+  - epic: 1
+    action: "Commit per-story (or at least per-epic) going forward"
+    owner: "ergusto"
+    status: open
+  - epic: 1
+    action: "Introduce a component-test harness (React Testing Library) so UI failure-paths are unit-testable"
+    owner: "dev"
+    status: open
+  - epic: 1
+    action: "Keep project-context.md in sync as reality changes"
+    owner: "dev"
+    status: open
+  - epic: 1
+    action: "E2E test-DB isolation and cleanup (wire the test compose profile as the E2E DB)"
+    owner: "dev"
+    status: open
+  - epic: 1
+    action: "Client-side fetch timeout / AbortController for hung mutations (Story 2.2)"
+    owner: "dev"
+    status: open
+  - epic: 1
+    action: "Integration tests skip silently without TEST_DATABASE_URL — enforce via Story 4.2 coverage gate + CI provisioning"
+    owner: "dev"
+    status: open
+  - epic: 1
+    action: "healthcheck() query is not cancelled on timeout (can pin a pool connection) — watch, revisit if it manifests"
+    owner: "dev"
+    status: open
+  - epic: 1
+    action: "Toggle-failure UI test — add when a component harness lands, or fault-injection E2E in Story 4.1"
+    owner: "dev"
+    status: open
+  - epic: 1
+    action: "Fuller confirm-dialog a11y (focus-return on cancel + aria-live) — Story 3.4 / 4.2 axe audit"
+    owner: "dev"
+    status: open

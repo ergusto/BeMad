@@ -17,12 +17,13 @@ cp .env.example .env
 docker compose up --build
 ```
 
-This starts two services:
+This starts the stack and is **turnkey** — no manual migration step:
 
-- **app** — the Next.js server on http://localhost:3000
-- **db** — PostgreSQL 18, with a named volume (`bemad_pgdata`) for durable data
+- **db** — PostgreSQL 18, with a named volume (`bemad_pgdata`) for durable data (published on `localhost:${DB_PORT:-5432}`)
+- **migrate** — a one-shot service that applies the Drizzle migrations once the db is healthy
+- **app** — the Next.js server on http://localhost:3000 (starts only after `migrate` completes)
 
-The app waits for the database to be healthy before starting. Verify readiness:
+Then open http://localhost:3000. Verify readiness:
 
 ```bash
 curl -i http://localhost:3000/api/health
@@ -45,10 +46,10 @@ volume).
 ```bash
 nvm use            # Node 24
 npm install
-# Start a database (e.g. the compose db service):
-docker compose up -d db
+docker compose up -d db                                      # Postgres on localhost:5432
 export DATABASE_URL=postgres://bemad:bemad@127.0.0.1:5432/bemad
-npm run dev        # http://localhost:3000
+npm run db:migrate                                           # create the schema (first run only)
+npm run dev                                                  # http://localhost:3000
 ```
 
 ## Scripts
