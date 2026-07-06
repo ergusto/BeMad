@@ -1,0 +1,83 @@
+# generated: 2026-07-02
+# last_updated: 2026-07-02
+# project: BeMad
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+
+generated: 2026-07-02
+last_updated: 2026-07-06
+project: BeMad
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # Epic 1: Core Task Management
+  epic-1: done
+  1-1-project-scaffold-containerized-environment: done
+  1-2-todo-data-model-shared-zod-schema-repository: done
+  1-3-create-and-view-tasks-with-validation: done
+  1-4-edit-a-tasks-text-in-place: done
+  1-5-toggle-completion-with-clear-status: done
+  1-6-delete-a-task-with-confirmation: done
+  epic-1-retrospective: optional
+
+  # Epic 2: Instant & Polished Experience
+  epic-2: backlog
+  2-1-single-client-side-todo-store-with-empty-loading-error-states: backlog
+  2-2-optimistic-mutations-with-rollback: backlog
+  2-3-user-selectable-sort-order: backlog
+  2-4-responsive-layout: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: The Torgue Voice & Accessibility
+  epic-3: backlog
+  3-1-voice-pack-module-variant-catalog: backlog
+  3-2-deterministic-rotation-selector-voice-provider: backlog
+  3-3-wire-all-surfaces-to-the-voice-pack: backlog
+  3-4-accessibility-of-rotating-copy-wcag-2-2-aa: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Verified & Shippable
+  epic-4: backlog
+  4-1-complete-the-e2e-suite: backlog
+  4-2-coverage-accessibility-audit: backlog
+  4-3-security-performance-review: backlog
+  4-4-delivery-documentation: backlog
+  epic-4-retrospective: optional

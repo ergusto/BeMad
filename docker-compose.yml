@@ -1,0 +1,70 @@
+# `docker compose up` brings up the full dev stack (app + db). The `test`
+# profile adds an isolated, ephemeral Postgres for integration/E2E runs; the
+# `dev` profile adds Adminer for inspecting the database. (AD-12)
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bemad}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bemad}
+      POSTGRES_DB: ${POSTGRES_DB:-bemad}
+    volumes:
+      # Postgres 18+ stores data in a version-specific subdir; mount the volume
+      # at /var/lib/postgresql (not .../data), per the official image.
+      - bemad_pgdata:/var/lib/postgresql
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bemad} -d ${POSTGRES_DB:-bemad}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Default derived from the same POSTGRES_* vars the db service uses, so
+      # overriding a credential in .env can't silently desync the app's URL.
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-bemad}:${POSTGRES_PASSWORD:-bemad}@db:5432/${POSTGRES_DB:-bemad}}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --- test profile: isolated, throwaway Postgres for the test suites ---
+  db-test:
+    image: postgres:18-alpine
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bemad}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bemad}
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-bemad_test}
+    ports:
+      - "${TEST_DB_PORT:-5433}:5432"
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bemad} -d ${POSTGRES_TEST_DB:-bemad_test}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- dev profile: optional DB browser ---
+  adminer:
+    image: adminer:5
+    profiles: ["dev"]
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  bemad_pgdata:

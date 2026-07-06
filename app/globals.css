@@ -1,0 +1,36 @@
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: 2rem 1rem;
+}
+
+/* Completed tasks are visually distinct from active ones (FR-6). Line-through
+   alone (no opacity dimming) keeps text contrast WCAG-AA safe. */
+.todo-done {
+  text-decoration: line-through;
+}
