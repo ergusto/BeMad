@@ -9,45 +9,43 @@ stepsCompleted:
 lastStep: "step-04-validate-and-summarize"
 lastSaved: "2026-07-07"
 inputDocuments:
-  - "_bmad-output/implementation-artifacts/2-2-optimistic-mutations-with-rollback.md"
+  - "_bmad-output/implementation-artifacts/2-3-user-selectable-sort-order.md"
   - "_bmad-output/project-context.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-levels-framework.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-priorities-matrix.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-quality.md"
 ---
 
-# Test Automation Expansion — Story 2.2 (Optimistic mutations with rollback)
+# Test Automation Expansion — Story 2.3 (User-selectable sort order)
 
 **Author:** Murat (Master Test Architect) · **Date:** 2026-07-07 · **Mode:** Create · **Execution:** sequential
 
-_(Supersedes the Story 2.1 automation summary.)_
+_(Supersedes the Story 2.2 automation summary.)_
 
 ## 1. Preflight & Context
 
-- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 2.2 is a client-state change (AD-7 optimistic + rollback) on the AD-14 single store, plus a client-wrapper timeout. Surface = the pure reducer (8 new actions), the store orchestration, the `request()` wrapper, and the store-driven UI.
-- **Framework present:** `playwright.config.ts` (chromium + mobile), `vitest.config.ts` (`fileParallelism:false`). Playwright Utils enabled (network-first interception is the house pattern).
-- **Coverage delivered by dev-story was already strong:** reducer unit tests fully rewritten around the optimistic actions (create/update/delete × optimistic/commit/rollback, no-op-when-not-ready, pending-guard) + `optimistic.spec.ts` (reconcile happy path + create/toggle/delete rollback via `page.route`).
+- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 2.3 is client-owned, purely-presentational sort (FR-8): a pure `sortEntries` module + a store-derived `sortedEntries` + a `<select>` control. No server surface.
+- **Framework present:** `playwright.config.ts` (chromium + mobile), `vitest.config.ts` (`fileParallelism:false`). Playwright Utils enabled.
+- **Coverage delivered by dev-story was already strong:** 13 unit tests (all four comparators, pending placement for newest/oldest/active-first, case-insensitive alphabetical + tiebreaks, non-mutation, empty, stable equal-keys) + 8 E2E (default + each option × chromium/mobile).
 
 ## 2. Coverage Plan (two real gaps)
 
-Applying the test-priorities matrix, two P1 gaps remained after dev-story:
+Applying the test-priorities matrix:
 
-1. **The new `request()` timeout/network path had no direct test.** `AbortSignal.timeout` → `TodoApiError` mapping is the safety net that turns a hung mutation into a normal failure → rollback. Untested, it could silently regress (e.g. a refactor that swallows the abort).
-2. **The `edit` rollback case (AC #2, first bullet) was not covered by E2E.** `create`/`toggle`/`delete` rollback each had a spec; `edit` — restore prior text **but keep the typed draft to retry** — is the most nuanced FR-10 rule and had none.
+1. **Cross-feature: sort + optimistic create (P1).** The dev-story E2E only exercised sorting on a static seeded list. The interesting integration — a newly-created task is **appended last** to canonical `entries` but must be **sorted** into place by the active order — was unproven in-browser. This is exactly where a "sort just reads canonical order" regression would hide.
+2. **Alphabetical + pending (P2).** Unit pending-placement covered newest/oldest/active-first but not alphabetical (a pending entry should sort by its `text` like any saved entry).
 
-Not added (deliberately, with rationale):
-- **Perf assertion (≤100 ms / ≤500 ms p95)** — out of scope here; owned by Story 4.3 (measurement). This story makes it optimistic; 4.3 verifies the budget.
-- **Toggle-failure component test** — still needs a React Testing Library harness (a new dependency); the toggle rollback is covered at E2E level instead. Remains a tracked deferral for Story 4.1/4.2.
+Not added (deliberately):
+- **Store-level React integration test** — still needs a React Testing Library harness (a new dependency); covered at E2E level instead. Tracked deferral for Story 4.1/4.2.
+- **Sort persistence across reload** — fenced out of scope by the story (selection is session-only); no test needed.
 
 ## 3. Tests Generated
 
-**Unit — `tests/unit/todos-client.test.ts`** (+3, new `describe`: "request timeout / network handling"):
-- AbortSignal `TimeoutError` → `TodoApiError { code: UNKNOWN, "The request timed out. Please try again." }`.
-- Generic network rejection → `TodoApiError { code: UNKNOWN, "Network error. Please try again." }`.
-- Every request attaches an `AbortSignal` (the timeout bound is actually wired).
+**Unit — `tests/unit/todo-sort.test.ts`** (+1):
+- Alphabetical ordering places a pending entry by its text among saved entries.
 
-**E2E — `tests/e2e/optimistic.spec.ts`** (+1):
-- **edit rollback**: PATCH forced to 500 → error banner shown, the editor stays open with the typed draft (`edited attempt`), and Cancel returns the row to its prior text. (Complements the existing reconcile / create / toggle / delete specs.)
+**E2E — `tests/e2e/sort.spec.ts`** (+1):
+- "a new task is sorted by the active order (newest → top), not just appended": with the default `newest` sort, a held-POST create shows the optimistic pending row **at the top** (though canonical order appends it last), and it stays at the top after commit (its `createdAt` is newest). Proves `sortedEntries` reorders the appended pending row rather than rendering raw canonical order.
 
 ## 4. Validation
 
@@ -55,12 +53,12 @@ Not added (deliberately, with rationale):
 | ---- | ------ |
 | `tsc --noEmit` | ✅ clean |
 | `eslint .` | ✅ clean |
-| Vitest (with `TEST_DATABASE_URL`) | ✅ **115 passed** (was 112) |
-| Playwright (chromium + mobile) | ✅ **30 passed**, 2 skipped (smoke placeholders) |
+| Vitest (with `TEST_DATABASE_URL`) | ✅ **131 passed** (was 130) |
+| Playwright (chromium + mobile) | ✅ **42 passed**, 2 skipped |
 
-- Deterministic: all new tests use `page.route` interception or mocked `fetch` — no reliance on a real DB or timing.
+- Deterministic: GET/POST interception via `page.route`; no DB or timing reliance.
 - No new dependencies; `fileParallelism:false` preserved.
 
 ## 5. Handoff
 
-Story 2.2 test coverage is comprehensive across levels (pure-reducer unit, client-wrapper unit incl. the timeout net, and full-flow E2E for all four optimistic ops + reconcile). Ready for `code-review`.
+Story 2.3 coverage spans pure-comparator units (all options, edge cases, pending, stability, non-mutation) and full-flow E2E (each option reorders; sort composes correctly with optimistic create). Ready for `code-review`.

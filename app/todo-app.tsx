@@ -6,6 +6,7 @@ import {
   TodoStoreProvider,
   useTodoStore,
   isPending,
+  SORT_OPTIONS,
   type PendingTodo,
 } from "@/lib/store";
 
@@ -100,23 +101,39 @@ function TodoView() {
       ) : store.isEmpty ? (
         <p>No tasks yet.</p>
       ) : (
-        <ul>
-          {state.entries.map((entry) =>
-            isPending(entry) ? (
-              <PendingRow key={entry.tempId} entry={entry} />
-            ) : (
-              <TodoItem
-                key={entry.id}
-                todo={entry}
-                // Derived, not synced: if editingId points at a row that has left
-                // the list, no row is "editing" — editingId can never dangle.
-                editing={editingId === entry.id}
-                onStartEdit={() => setEditingId(entry.id)}
-                onStopEdit={() => setEditingId(null)}
-              />
-            ),
-          )}
-        </ul>
+        <>
+          <label>
+            Sort tasks{" "}
+            <select
+              aria-label="Sort tasks"
+              value={store.sortOrder}
+              onChange={(event) => store.setSortOrder(event.target.value as typeof store.sortOrder)}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ul>
+            {store.sortedEntries.map((entry) =>
+              isPending(entry) ? (
+                <PendingRow key={entry.tempId} entry={entry} />
+              ) : (
+                <TodoItem
+                  key={entry.id}
+                  todo={entry}
+                  // Derived, not synced: if editingId points at a row that has left
+                  // the list, no row is "editing" — editingId can never dangle.
+                  editing={editingId === entry.id}
+                  onStartEdit={() => setEditingId(entry.id)}
+                  onStopEdit={() => setEditingId(null)}
+                />
+              ),
+            )}
+          </ul>
+        </>
       )}
     </section>
   );

@@ -62,7 +62,7 @@ development_status:
   epic-2: in-progress
   2-1-single-client-side-todo-store-with-empty-loading-error-states: done
   2-2-optimistic-mutations-with-rollback: done
-  2-3-user-selectable-sort-order: backlog
+  2-3-user-selectable-sort-order: done
   2-4-responsive-layout: backlog
   epic-2-retrospective: optional
 

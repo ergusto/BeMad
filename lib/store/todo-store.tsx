@@ -16,6 +16,7 @@ import {
   fetchTodos,
   updateTodo,
 } from "@/lib/todos-client";
+import { DEFAULT_SORT, sortEntries, type SortOrder } from "./sort";
 
 // AD-14 single client-side owner of the todo collection + its loading/error
 // state, and (Story 2.2) the optimistic-mutation + rollback paradigm (AD-7).
@@ -169,6 +170,12 @@ export interface TodoStore {
    *  optimistic removal of the row that triggered it (e.g. a failed delete). */
   mutationError: string | null;
   dismissMutationError: () => void;
+  /** Client-owned sort selection (FR-8) and the derived, ordered view of the
+   *  entries. `state.entries` stays canonical (creation-order); sorting is
+   *  purely presentational and issues no network request. */
+  sortOrder: SortOrder;
+  setSortOrder: (order: SortOrder) => void;
+  sortedEntries: TodoEntry[];
   retry: () => void;
   create: (input: CreateTodoInput) => Promise<void>;
   update: (id: string, input: UpdateTodoInput) => Promise<void>;
@@ -182,6 +189,9 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
   // Mutation errors live outside the reducer: they must persist even after the
   // originating row is optimistically removed, and never change the list status.
   const [mutationError, setMutationError] = useState<string | null>(null);
+  // Sort selection is presentational — like mutationError it lives outside the
+  // reducer so it never perturbs the load/optimistic state machine.
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT);
   const mountedRef = useRef(true);
   // Only the most-recent load may dispatch (guards stale/duplicate responses).
   const loadIdRef = useRef(0);
@@ -235,6 +245,11 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
     isEmpty: state.status === "ready" && state.entries.length === 0,
     mutationError,
     dismissMutationError: () => setMutationError(null),
+    sortOrder,
+    setSortOrder,
+    // Derived view only — canonical `state.entries` is left untouched.
+    sortedEntries:
+      state.status === "ready" ? sortEntries(state.entries, sortOrder) : [],
     retry: load,
     // Optimistic apply → reconcile on success → rollback on failure (AD-7).
     async create(input) {
