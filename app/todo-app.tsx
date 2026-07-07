@@ -1,81 +1,61 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { createTodoSchema, updateTodoSchema, type Todo } from "@/lib/todos";
 import {
-  createTodo,
-  deleteTodo,
-  fetchTodos,
-  updateTodo,
-} from "@/lib/todos-client";
+  TodoStoreProvider,
+  useTodoStore,
+  isPending,
+  type PendingTodo,
+} from "@/lib/store";
 
-// Minimal create + view + inline-edit UI. The single client state store, full
-// empty/loading/error states, optimistic updates, sort, and the voice pack are
-// LATER stories (2.1, 2.2, 2.3, Epic 3). Copy is plain for now.
+// The collection state (data + loading/error/empty) lives in the single store
+// (AD-14), which now also owns optimistic mutations + rollback (AD-7). This
+// component is a consumer. Per-item view state (edit draft, confirm-delete,
+// in-flight flags) stays local to each row. Sort (2.3) and the voice pack
+// (Epic 3) are later stories.
 export default function TodoApp() {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  return (
+    <TodoStoreProvider>
+      <TodoView />
+    </TodoStoreProvider>
+  );
+}
+
+function TodoView() {
+  const store = useTodoStore();
+  const { state } = store;
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   // Single active editor across all rows (avoids duplicate edit inputs).
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    fetchTodos()
-      .then((loaded) => {
-        if (active) setTodos(loaded);
-      })
-      .catch((err: unknown) => {
-        if (active) {
-          setError(err instanceof Error ? err.message : "Failed to load tasks.");
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Guard against submitting before the initial load resolves (which would let
-    // the late fetch clobber the new todo) and against double-submit re-entry.
-    if (loading || submitting) {
+    // Can only add once the list has loaded; guard double-submit re-entry too.
+    if (submitting || state.status !== "ready") {
       return;
     }
-    setError(null);
+    setFormError(null);
 
     // Client-side mirror of the server validation (same shared schema, AD-5).
     const parsed = createTodoSchema.safeParse({ text });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Invalid task.");
+      setFormError(parsed.error.issues[0]?.message ?? "Invalid task.");
       return;
     }
 
     setSubmitting(true);
     try {
-      const created = await createTodo(parsed.data);
-      setTodos((prev) => [...prev, created]);
+      // Optimistic: the task appears immediately; server reconciles it (AD-7).
+      await store.create(parsed.data);
       setText("");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create task.");
+    } catch {
+      // Rollback + the plain error are owned by the store (mutationError banner);
+      // keep the typed text so the user can retry (FR-10).
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  function handleUpdated(updated: Todo) {
-    setTodos((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-  }
-
-  function handleDeleted(id: string) {
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-    if (editingId === id) {
-      setEditingId(null);
     }
   }
 
@@ -89,33 +69,73 @@ export default function TodoApp() {
           placeholder="What needs doing?"
           disabled={submitting}
         />
-        <button type="submit" disabled={submitting || loading}>
+        <button type="submit" disabled={submitting || state.status !== "ready"}>
           Add task
         </button>
       </form>
 
-      {error ? <p role="alert">{error}</p> : null}
+      {formError ? <p role="alert">{formError}</p> : null}
 
-      {loading ? (
+      {/* Mutation failures (create/edit/toggle/delete) surface here so the
+          message survives even when the originating row was optimistically
+          removed (e.g. a failed delete). Retryable: dismiss and try again. */}
+      {store.mutationError ? (
+        <div role="alert">
+          <p>{store.mutationError}</p>
+          <button type="button" onClick={store.dismissMutationError}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
+      {state.status === "loading" ? (
         <p>Loading…</p>
-      ) : todos.length > 0 ? (
-        <ul>
-          {todos.map((todo) => (
-            <TodoItem
-              key={todo.id}
-              todo={todo}
-              editing={editingId === todo.id}
-              onStartEdit={() => setEditingId(todo.id)}
-              onStopEdit={() => setEditingId(null)}
-              onUpdated={handleUpdated}
-              onDeleted={handleDeleted}
-            />
-          ))}
-        </ul>
-      ) : error ? null : (
+      ) : state.status === "error" ? (
+        <div role="alert">
+          <p>{state.message}</p>
+          <button type="button" onClick={store.retry}>
+            Retry
+          </button>
+        </div>
+      ) : store.isEmpty ? (
         <p>No tasks yet.</p>
+      ) : (
+        <ul>
+          {state.entries.map((entry) =>
+            isPending(entry) ? (
+              <PendingRow key={entry.tempId} entry={entry} />
+            ) : (
+              <TodoItem
+                key={entry.id}
+                todo={entry}
+                // Derived, not synced: if editingId points at a row that has left
+                // the list, no row is "editing" — editingId can never dangle.
+                editing={editingId === entry.id}
+                onStartEdit={() => setEditingId(entry.id)}
+                onStopEdit={() => setEditingId(null)}
+              />
+            ),
+          )}
+        </ul>
       )}
     </section>
+  );
+}
+
+// An optimistic create not yet confirmed by the server. It has no server id, so
+// it is non-mutable (no edit/toggle/delete controls) until it reconciles (FR-11).
+function PendingRow({ entry }: { entry: PendingTodo }) {
+  return (
+    <li aria-busy="true" data-pending="true">
+      <input
+        type="checkbox"
+        checked={false}
+        disabled
+        readOnly
+        aria-label={`Completed: ${entry.text}`}
+      />{" "}
+      <span>{entry.text}</span> <span>Saving…</span>
+    </li>
   );
 }
 
@@ -124,65 +144,52 @@ function TodoItem({
   editing,
   onStartEdit,
   onStopEdit,
-  onUpdated,
-  onDeleted,
 }: {
   todo: Todo;
   editing: boolean;
   onStartEdit: () => void;
   onStopEdit: () => void;
-  onUpdated: (updated: Todo) => void;
-  onDeleted: (id: string) => void;
 }) {
+  const store = useTodoStore();
   const [draft, setDraft] = useState(todo.text);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Local, client-side edit validation only. Server/mutation failures are shown
+  // by the store's mutationError banner (it survives this row unmounting).
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   async function confirmDelete() {
     if (deleting) {
       return;
     }
-    setError(null);
     setDeleting(true);
     try {
-      await deleteTodo(todo.id);
-      onDeleted(todo.id); // removes this row (component unmounts)
-    } catch (err: unknown) {
-      // Keep the task; surface the plain error (no optimistic removal — 2.2).
-      setError(err instanceof Error ? err.message : "Failed to delete task.");
+      // Optimistic: removes this row immediately (component unmounts). On
+      // failure the store reinserts it at its original index + shows the banner.
+      await store.remove(todo.id);
+    } catch {
+      // Row reappears via the store's rollback; error shown in the banner.
       setDeleting(false);
     }
   }
 
-  function startConfirmingDelete() {
-    // Clear any stale toggle/edit error so it doesn't render beside the prompt.
-    setError(null);
-    setConfirmingDelete(true);
-  }
-
   function cancelDelete() {
     setConfirmingDelete(false);
-    setError(null);
   }
 
   async function toggleCompleted() {
     if (toggling) {
       return;
     }
-    setError(null);
     setToggling(true);
     try {
-      // Await the server, then apply the returned todo (no optimistic flip —
-      // that's Story 2.2). Bi-directional via `!todo.completed`.
-      const updated = await updateTodo(todo.id, {
-        completed: !todo.completed,
-      });
-      onUpdated(updated);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update task.");
+      // Optimistic flip is applied by the store synchronously; the checkbox
+      // reflects it instantly. Rollback + error on failure are the store's job.
+      await store.update(todo.id, { completed: !todo.completed });
+    } catch {
+      // Store rolled the flip back and surfaced the error in the banner.
     } finally {
       setToggling(false);
     }
@@ -190,13 +197,13 @@ function TodoItem({
 
   function startEditing() {
     setDraft(todo.text);
-    setError(null);
+    setValidationError(null);
     onStartEdit();
   }
 
   function cancelEditing() {
-    // Prior text is retained — we never mutated the stored todo (AC #2).
-    setError(null);
+    // Prior text is retained — we never mutated the stored todo.
+    setValidationError(null);
     onStopEdit();
   }
 
@@ -205,23 +212,26 @@ function TodoItem({
     if (saving) {
       return;
     }
-    setError(null);
+    setValidationError(null);
 
     // Client mirror of the server's PATCH validation (same shared schema, AD-5).
     const parsed = updateTodoSchema.safeParse({ text: draft });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Invalid task.");
+      setValidationError(parsed.error.issues[0]?.message ?? "Invalid task.");
       return;
     }
 
     setSaving(true);
+    // Optimistic: close the editor now so the list shows the new text
+    // immediately (the store already applied it). The row's controls stay
+    // disabled (via `saving`) until the server reconciles.
+    onStopEdit();
     try {
-      const updated = await updateTodo(todo.id, { text: parsed.data.text });
-      onUpdated(updated);
-      onStopEdit();
-    } catch (err: unknown) {
-      // Prior text retained; surface the plain error (AC #2).
-      setError(err instanceof Error ? err.message : "Failed to save task.");
+      await store.update(todo.id, { text: parsed.data.text });
+    } catch {
+      // Store rolled the text back + surfaced the error; reopen the editor. The
+      // `draft` state still holds the typed value, so the user can retry (FR-10).
+      onStartEdit();
     } finally {
       setSaving(false);
     }
@@ -244,7 +254,7 @@ function TodoItem({
             Cancel
           </button>
         </form>
-        {error ? <span role="alert">{error}</span> : null}
+        {validationError ? <span role="alert">{validationError}</span> : null}
       </li>
     );
   }
@@ -255,7 +265,7 @@ function TodoItem({
         type="checkbox"
         checked={todo.completed}
         onChange={toggleCompleted}
-        disabled={toggling || confirmingDelete}
+        disabled={toggling || confirmingDelete || saving}
         aria-label={`Completed: ${todo.text}`}
       />{" "}
       {/* Rendered as plain text — React escapes it (AD-11). Completed styling
@@ -269,7 +279,7 @@ function TodoItem({
       <button
         type="button"
         onClick={startEditing}
-        disabled={toggling || confirmingDelete}
+        disabled={toggling || confirmingDelete || saving}
       >
         Edit
       </button>{" "}
@@ -297,14 +307,13 @@ function TodoItem({
       ) : (
         <button
           type="button"
-          onClick={startConfirmingDelete}
-          disabled={toggling}
+          onClick={() => setConfirmingDelete(true)}
+          disabled={toggling || saving}
           aria-label={`Delete: ${todo.text}`}
         >
           Delete
         </button>
       )}
-      {error ? <span role="alert">{error}</span> : null}
     </li>
   );
 }

@@ -11,7 +11,7 @@
 
 ## Deferred from: code review of story-1.4 (2026-07-06)
 
-- **No client-side fetch timeout / AbortController** — `createTodo`/`updateTodo` (and the create/edit UI) have no request timeout; if a mutation hangs, `submitting`/`saving` never clears and the edit row is stuck (Cancel is disabled during save). Address in Story 2.2 (optimistic + rollback), which owns in-flight/abort handling. [lib/todos-client.ts, app/todo-app.tsx]
+- ~~**No client-side fetch timeout / AbortController**~~ — **RESOLVED in Story 2.2.** `lib/todos-client.ts` now wraps every request in `request()` with `AbortSignal.timeout(10_000)`; a timeout/network failure becomes a `TodoApiError` → normal failure → per-op optimistic rollback. [lib/todos-client.ts]
 
 ## Deferred from: code review of story-1.5 (2026-07-06)
 
@@ -21,3 +21,11 @@
 
 - **Fuller confirm-dialog accessibility** — the delete confirmation now moves focus to Cancel on open (safe default), but focus RETURN to the trigger on cancel and an `aria-live` announcement of the prompt are deferred to Story 3.4 (accessibility) / the Story 4.2 axe audit. [app/todo-app.tsx]
 - (Client fetch timeout/AbortController for hung mutations — already tracked under the Story 1.4 defer for Story 2.2.)
+
+## Deferred from: code review of story-2.1 (2026-07-06)
+
+- **Reconcile-after-mutation when the collection is not `ready`** — a mutation that succeeds server-side while the store is not in `ready` state (e.g. a future reload/sort-refresh path in Story 2.3, or dev StrictMode remount) is no-op'd by the reducer and silently dropped from the UI until the next load. Currently unreachable in production. Story 2.2 narrowed the window (optimistic dispatches only fire from a `ready` list, and commit/rollback no-op safely if the entry is gone), but a mutation resolving *across* a load→not-ready transition is still dropped. Revisit with Story 2.3's sort-refresh path. [lib/store/todo-store.tsx]
+
+## Deferred from: code review of story-2.2 (2026-07-07)
+
+- **Timeout/abort after a server-side success causes a false rollback** — every request is now bounded by `AbortSignal.timeout(10_000)` (`lib/todos-client.ts`). If the server commits a create/update/delete but the response is slow (or the connection drops) past the timeout, the client treats the abort as an ordinary failure and rolls back state the server actually kept. Worst case: a create times out → optimistic row removed + text retained → the user's natural retry issues a second POST → **duplicate todo** on next reload. Toggle/edit/delete diverge silently from the server until reload. Inherent optimistic + timeout tradeoff; a proper fix needs request idempotency keys and/or a reconcile-on-reload — both out of Story 2.2 scope (no API/route/schema changes allowed). Also note the timeout now bounds the GET/load path: a legitimately slow (>10s) initial load becomes an error state (with Retry) where it previously waited indefinitely — judged acceptable (better than an infinite spinner). Revisit alongside a future reconciliation/idempotency story. [lib/todos-client.ts, lib/store/todo-store.tsx]

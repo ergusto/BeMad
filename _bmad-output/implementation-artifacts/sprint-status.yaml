@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-07-02
-last_updated: 2026-07-06
+last_updated: 2026-07-07
 project: BeMad
 project_key: NOKEY
 tracking_system: file-system
@@ -59,9 +59,9 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 2: Instant & Polished Experience
-  epic-2: backlog
-  2-1-single-client-side-todo-store-with-empty-loading-error-states: backlog
-  2-2-optimistic-mutations-with-rollback: backlog
+  epic-2: in-progress
+  2-1-single-client-side-todo-store-with-empty-loading-error-states: done
+  2-2-optimistic-mutations-with-rollback: done
   2-3-user-selectable-sort-order: backlog
   2-4-responsive-layout: backlog
   epic-2-retrospective: optional
@@ -102,7 +102,7 @@ action_items:
   - epic: 1
     action: "Client-side fetch timeout / AbortController for hung mutations (Story 2.2)"
     owner: "dev"
-    status: open
+    status: done
   - epic: 1
     action: "Integration tests skip silently without TEST_DATABASE_URL — enforce via Story 4.2 coverage gate + CI provisioning"
     owner: "dev"
