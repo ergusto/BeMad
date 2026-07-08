@@ -83,6 +83,7 @@ test("sort options use fixed voiced copy (non-rotating, FR-17)", async ({
   });
 
   await page.goto("/");
+  await expect(page.getByTestId("sort")).toBeVisible(); // wait for the ready render
   const options = await page
     .getByTestId("sort")
     .locator("option")

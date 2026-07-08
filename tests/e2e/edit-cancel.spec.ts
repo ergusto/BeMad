@@ -13,7 +13,7 @@ test("cancelling an edit retains the original text", async ({ page }) => {
   await expect(row).toBeVisible();
 
   await row.getByTestId("edit").click();
-  await page.getByLabel("Edit task").fill(`${original} DISCARDED`);
+  await page.getByLabel("Edit task", { exact: true }).fill(`${original} DISCARDED`);
   await page.getByTestId("cancel-edit").click();
 
   await expect(page.getByText(original, { exact: true })).toBeVisible();
@@ -33,7 +33,7 @@ test("an empty edit is rejected and the original text is retained", async ({
   await expect(row).toBeVisible();
 
   await row.getByTestId("edit").click();
-  await page.getByLabel("Edit task").fill("   ");
+  await page.getByLabel("Edit task", { exact: true }).fill("   ");
   await page.getByTestId("save").click();
 
   // Error shown; still in edit mode; cancel restores the original.

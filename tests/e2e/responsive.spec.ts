@@ -95,5 +95,5 @@ test("controls remain visible and usable at a mobile viewport", async ({
 
   // A control is actually operable (not just visible) at this width.
   await row.getByTestId("edit").click();
-  await expect(page.getByLabel("Edit task")).toBeVisible();
+  await expect(page.getByLabel("Edit task", { exact: true })).toBeVisible();
 });

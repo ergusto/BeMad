@@ -184,7 +184,7 @@ test("edit rollback restores the prior text but keeps the typed draft to retry",
     .getByTestId("edit")
     .click();
 
-  const editInput = page.getByLabel("Edit task");
+  const editInput = page.getByLabel("Edit task", { exact: true });
   await editInput.fill("edited attempt");
   await page.getByTestId("save").click();
 
@@ -292,11 +292,11 @@ test("edit is applied optimistically before the server confirms", async ({
     .locator("li", { hasText: seeded.text })
     .getByTestId("edit")
     .click();
-  await page.getByLabel("Edit task").fill("renamed task");
+  await page.getByLabel("Edit task", { exact: true }).fill("renamed task");
   await page.getByTestId("save").click();
 
   // Optimistic: editor closes and the list shows the new text while PATCH held.
-  await expect(page.getByLabel("Edit task")).toHaveCount(0);
+  await expect(page.getByLabel("Edit task", { exact: true })).toHaveCount(0);
   await expect(page.locator("li", { hasText: "renamed task" })).toBeVisible();
 
   // Release the server → the reconciled text stays.

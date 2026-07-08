@@ -13,13 +13,16 @@ const source = readFileSync(
   "utf8",
 );
 
+// Old hardcoded VISIBLE copy that must now come from the voice pack. (Note:
+// stable `aria-label`s like "Add task" / "Sort tasks" are intentional accessible
+// names added in Story 3.4 — those are NOT hardcoded visible copy and are
+// deliberately not listed here.)
 const FORBIDDEN_LITERALS = [
   "No tasks yet.",
   "Loading…",
   "Saving…",
   "Delete this task?",
   "What needs doing?",
-  "Add task",
 ];
 
 describe("voice wiring (FR-14: no hardcoded user-facing strings)", () => {

@@ -21,7 +21,7 @@ test("edit a task's text inline and it persists across reload", async ({
   // hasText-scoped `row` locator no longer matches — use page-level locators
   // for the single active edit input / save button.
   await row.getByTestId("edit").click();
-  await page.getByLabel("Edit task").fill(edited);
+  await page.getByLabel("Edit task", { exact: true }).fill(edited);
   await page.getByTestId("save").click();
 
   await expect(page.getByText(edited)).toBeVisible();

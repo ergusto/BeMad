@@ -141,3 +141,10 @@ main li form {
 main input::placeholder {
   text-transform: uppercase;
 }
+
+/* Keyboard focus is always clearly visible (WCAG 2.4.7), using a foreground-
+   colour ring that works in light + dark. */
+:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}

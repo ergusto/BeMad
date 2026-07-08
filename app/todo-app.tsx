@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   createTodoSchema,
   updateTodoSchema,
@@ -126,6 +126,7 @@ function TodoView() {
           type="submit"
           className="voice"
           data-testid="add-task"
+          aria-label="Add task"
           disabled={submitting || state.status !== "ready"}
         >
           {addButton.text}
@@ -219,6 +220,7 @@ function LoadError({
         type="button"
         className="voice"
         data-testid="retry"
+        aria-label="Retry loading tasks"
         onClick={() => {
           retry.reroll();
           onRetry();
@@ -246,6 +248,7 @@ function MutationBanner({
         type="button"
         className="voice"
         data-testid="dismiss"
+        aria-label="Dismiss error"
         onClick={() => {
           dismiss.reroll();
           onDismiss();
@@ -301,6 +304,18 @@ function TodoItem({
 
   const editButton = useVoice("editButton");
   const deleteButton = useVoice("deleteButton");
+
+  // Focus management: when the delete-confirm closes via Cancel, return focus to
+  // the Delete trigger (WCAG 2.4.3; Epic 1 retro item). On confirm-success the
+  // row unmounts, so this only fires for the cancel/reopen path.
+  const deleteRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+  useEffect(() => {
+    if (wasConfirming.current && !confirmingDelete) {
+      deleteRef.current?.focus();
+    }
+    wasConfirming.current = confirmingDelete;
+  }, [confirmingDelete]);
 
   async function confirmDelete() {
     if (deleting) return;
@@ -389,6 +404,7 @@ function TodoItem({
         type="button"
         className="voice"
         data-testid="edit"
+        aria-label={`Edit task: ${todo.text}`}
         onClick={() => {
           editButton.reroll();
           startEditing();
@@ -406,9 +422,11 @@ function TodoItem({
         />
       ) : (
         <button
+          ref={deleteRef}
           type="button"
           className="voice"
           data-testid="delete"
+          aria-label={`Delete task: ${todo.text}`}
           onClick={() => {
             deleteButton.reroll();
             setConfirmingDelete(true);
@@ -453,6 +471,7 @@ function EditRow({
           type="submit"
           className="voice"
           data-testid="save"
+          aria-label="Save task"
           onClick={() => saveButton.reroll()}
           disabled={saving}
         >
@@ -462,6 +481,7 @@ function EditRow({
           type="button"
           className="voice"
           data-testid="cancel-edit"
+          aria-label="Cancel editing"
           onClick={() => {
             cancelButton.reroll();
             onCancel();
@@ -500,6 +520,7 @@ function DeleteConfirm({
         type="button"
         className="voice"
         data-testid="confirm-delete"
+        aria-label={`Confirm delete: ${taskText}`}
         onClick={() => {
           confirm.reroll();
           onConfirm();
@@ -513,6 +534,7 @@ function DeleteConfirm({
         type="button"
         className="voice-quiet"
         data-testid="cancel-delete"
+        aria-label="Cancel delete"
         onClick={() => {
           cancel.reroll();
           onCancel();
