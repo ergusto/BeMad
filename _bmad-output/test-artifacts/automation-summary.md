@@ -9,43 +9,40 @@ stepsCompleted:
 lastStep: "step-04-validate-and-summarize"
 lastSaved: "2026-07-07"
 inputDocuments:
-  - "_bmad-output/implementation-artifacts/2-3-user-selectable-sort-order.md"
+  - "_bmad-output/implementation-artifacts/2-4-responsive-layout.md"
   - "_bmad-output/project-context.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-levels-framework.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-priorities-matrix.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-quality.md"
 ---
 
-# Test Automation Expansion — Story 2.3 (User-selectable sort order)
+# Test Automation Expansion — Story 2.4 (Responsive layout)
 
 **Author:** Murat (Master Test Architect) · **Date:** 2026-07-07 · **Mode:** Create · **Execution:** sequential
 
-_(Supersedes the Story 2.2 automation summary.)_
+_(Supersedes the Story 2.3 automation summary.)_
 
 ## 1. Preflight & Context
 
-- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 2.3 is client-owned, purely-presentational sort (FR-8): a pure `sortEntries` module + a store-derived `sortedEntries` + a `<select>` control. No server surface.
-- **Framework present:** `playwright.config.ts` (chromium + mobile), `vitest.config.ts` (`fileParallelism:false`). Playwright Utils enabled.
-- **Coverage delivered by dev-story was already strong:** 13 unit tests (all four comparators, pending placement for newest/oldest/active-first, case-insensitive alphabetical + tiebreaks, non-mutation, empty, stable equal-keys) + 8 E2E (default + each option × chromium/mobile).
+- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 2.4 is **presentation-only** responsive CSS (`app/globals.css` + one non-behavioural class hook). There is no new business logic — so **no unit surface**; coverage is inherently E2E/layout.
+- **Framework present:** `playwright.config.ts` runs every spec under a `chromium` (desktop) and a `mobile` (Pixel 7) project, so the whole suite already exercises two viewports.
+- **Coverage delivered by dev-story:** `tests/e2e/responsive.spec.ts` — long-unbroken-text row wraps within itself (`scrollWidth − clientWidth ≤ 1`) + no page horizontal scroll at 360px and 1280px, and controls visible/operable at mobile.
 
-## 2. Coverage Plan (two real gaps)
+## 2. Coverage Plan (one proportional gap)
 
-Applying the test-priorities matrix:
+Applying the test-priorities matrix to a CSS-only story: the behaviour is already covered at the two headline viewports and by the two device projects. The single worthwhile addition is a **boundary viewport**:
 
-1. **Cross-feature: sort + optimistic create (P1).** The dev-story E2E only exercised sorting on a static seeded list. The interesting integration — a newly-created task is **appended last** to canonical `entries` but must be **sorted** into place by the active order — was unproven in-browser. This is exactly where a "sort just reads canonical order" regression would hide.
-2. **Alphabetical + pending (P2).** Unit pending-placement covered newest/oldest/active-first but not alphabetical (a pending entry should sort by its `text` like any saved entry).
+1. **320px (narrowest realistic phone) (P2).** The dev-story spec used 360px as the smallest width; 320px is the real lower bound (iPhone SE / small Android) and the most likely width to expose overflow. Added it to the parametrized viewport list.
 
-Not added (deliberately):
-- **Store-level React integration test** — still needs a React Testing Library harness (a new dependency); covered at E2E level instead. Tracked deferral for Story 4.1/4.2.
-- **Sort persistence across reload** — fenced out of scope by the story (selection is session-only); no test needed.
+Not added (deliberately, with rationale):
+- **Unit tests** — none; there is no logic to unit-test (pure CSS + a class string). Adding trivial DOM-class assertions would be noise.
+- **"No overlap" pixel assertions** — brittle and low-value; overlap is prevented structurally by flex + `gap` + `flex-wrap`, and the no-horizontal-overflow + controls-visible assertions cover the observable AC. Deferred to the Story 4.2 axe/visual audit if desired.
+- **Full a11y/visual-regression** — out of scope; owned by Epic 3 (voice a11y) / Epic 4 (axe audit).
 
 ## 3. Tests Generated
 
-**Unit — `tests/unit/todo-sort.test.ts`** (+1):
-- Alphabetical ordering places a pending entry by its text among saved entries.
-
-**E2E — `tests/e2e/sort.spec.ts`** (+1):
-- "a new task is sorted by the active order (newest → top), not just appended": with the default `newest` sort, a held-POST create shows the optimistic pending row **at the top** (though canonical order appends it last), and it stays at the top after commit (its `createdAt` is newest). Proves `sortedEntries` reorders the appended pending row rather than rendering raw canonical order.
+**E2E — `tests/e2e/responsive.spec.ts`** (+1 viewport → the parametrized overflow/wrap test now runs at 320 / 360 / 1280px):
+- `no horizontal overflow at small-mobile (320px), long text wraps`.
 
 ## 4. Validation
 
@@ -53,12 +50,12 @@ Not added (deliberately):
 | ---- | ------ |
 | `tsc --noEmit` | ✅ clean |
 | `eslint .` | ✅ clean |
-| Vitest (with `TEST_DATABASE_URL`) | ✅ **131 passed** (was 130) |
-| Playwright (chromium + mobile) | ✅ **42 passed**, 2 skipped |
+| Vitest (with `TEST_DATABASE_URL`) | ✅ **131 passed** (unchanged — no unit surface) |
+| Playwright (chromium + mobile) | ✅ **50 passed**, 2 skipped (was 48) |
 
-- Deterministic: GET/POST interception via `page.route`; no DB or timing reliance.
+- Deterministic: GET interception; the wrap test asserts on the `<li>`'s own `scrollWidth/clientWidth` (not the clipped body), so it would fail if the responsive CSS were removed.
 - No new dependencies; `fileParallelism:false` preserved.
 
 ## 5. Handoff
 
-Story 2.3 coverage spans pure-comparator units (all options, edge cases, pending, stability, non-mutation) and full-flow E2E (each option reorders; sort composes correctly with optimistic create). Ready for `code-review`.
+Story 2.4 responsive layout is covered by layout assertions at three widths (320/360/1280) plus the full suite running under both device projects, and controls are asserted usable at mobile. Ready for `code-review`.

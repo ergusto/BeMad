@@ -286,8 +286,9 @@ function TodoItem({
         aria-label={`Completed: ${todo.text}`}
       />{" "}
       {/* Rendered as plain text — React escapes it (AD-11). Completed styling
-          comes from CSS (AD-10), not stored strings. */}
-      <span className={todo.completed ? "todo-done" : undefined}>
+          comes from CSS (AD-10), not stored strings. `todo-text` is a layout
+          hook (flex-grow + wrap); it does not change behaviour or the a11y name. */}
+      <span className={todo.completed ? "todo-text todo-done" : "todo-text"}>
         {todo.text}
       </span>{" "}
       <time dateTime={todo.createdAt}>
