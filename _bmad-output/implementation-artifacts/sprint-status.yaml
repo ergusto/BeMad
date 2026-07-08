@@ -67,8 +67,8 @@ development_status:
   epic-2-retrospective: done
 
   # Epic 3: The Torgue Voice & Accessibility
-  epic-3: backlog
-  3-1-voice-pack-module-variant-catalog: backlog
+  epic-3: in-progress
+  3-1-voice-pack-module-variant-catalog: done
   3-2-deterministic-rotation-selector-voice-provider: backlog
   3-3-wire-all-surfaces-to-the-voice-pack: backlog
   3-4-accessibility-of-rotating-copy-wcag-2-2-aa: backlog
@@ -120,7 +120,7 @@ action_items:
     owner: "dev"
     status: open
   - epic: 2
-    action: "Confirm the stable-accessible-name strategy for voiced copy BEFORE Story 3.3 (voiced visible text + stable aria names per AD-10/FR-17, or move E2E locators to test-ids) — voice rotation must not break the accessible names the E2E suite depends on"
+    action: "DECIDED 2026-07-08: voiced copy strategy = voice everywhere, visible text IS the accessible name (WCAG 2.5.3), migrate E2E control locators to data-testid, voice-pack variants kept unambiguous (FR-15). Implement in Story 3.3 (wiring) + add test-ids as surfaces are voiced; refactor the ~50 E2E name-based locators to test-ids."
     owner: "dev"
     status: open
   - epic: 2
