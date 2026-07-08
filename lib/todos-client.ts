@@ -38,8 +38,29 @@ async function parseJson<T>(res: Response): Promise<T> {
   }
 }
 
+// Bound every request so a hung server/network rejects instead of leaving a
+// mutation pending forever (a timeout becomes a normal failure → rollback).
+const REQUEST_TIMEOUT_MS = 10_000;
+
+async function request(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    const timedOut = err instanceof DOMException && err.name === "TimeoutError";
+    throw new TodoApiError(
+      "UNKNOWN",
+      timedOut
+        ? "The request timed out. Please try again."
+        : "Network error. Please try again.",
+    );
+  }
+}
+
 export async function fetchTodos(): Promise<Todo[]> {
-  const res = await fetch("/api/todos");
+  const res = await request("/api/todos");
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -47,7 +68,7 @@ export async function fetchTodos(): Promise<Todo[]> {
 }
 
 export async function createTodo(input: CreateTodoInput): Promise<Todo> {
-  const res = await fetch("/api/todos", {
+  const res = await request("/api/todos", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -62,7 +83,7 @@ export async function updateTodo(
   id: string,
   input: UpdateTodoInput,
 ): Promise<Todo> {
-  const res = await fetch(`/api/todos/${encodeURIComponent(id)}`, {
+  const res = await request(`/api/todos/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -74,7 +95,7 @@ export async function updateTodo(
 }
 
 export async function deleteTodo(id: string): Promise<void> {
-  const res = await fetch(`/api/todos/${encodeURIComponent(id)}`, {
+  const res = await request(`/api/todos/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   if (!res.ok) {

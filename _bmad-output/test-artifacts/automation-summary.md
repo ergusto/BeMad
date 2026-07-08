@@ -7,53 +7,52 @@ stepsCompleted:
     "step-04-validate-and-summarize",
   ]
 lastStep: "step-04-validate-and-summarize"
-lastSaved: "2026-07-06"
+lastSaved: "2026-07-08"
 inputDocuments:
-  - "_bmad-output/implementation-artifacts/1-6-delete-a-task-with-confirmation.md"
+  - "_bmad-output/implementation-artifacts/4-1-complete-the-e2e-suite.md"
   - "_bmad-output/project-context.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-levels-framework.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-priorities-matrix.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-quality.md"
 ---
 
-# Test Automation Expansion — Story 1.6 (Delete a task with confirmation)
+# Test Automation Expansion — Story 4.1 (Complete the E2E suite)
 
-**Author:** Murat (Master Test Architect) · **Date:** 2026-07-06 · **Mode:** Create · **Execution:** sequential
+**Author:** Murat (Master Test Architect) · **Date:** 2026-07-08 · **Mode:** Create · **Execution:** sequential
 
-_(Supersedes the Story 1.5 automation summary. Completes Epic 1's CRUD test coverage.)_
+_(Supersedes the Story 3.4 automation summary.)_
 
 ## 1. Preflight & Context
 
-- **Stack:** fullstack (DELETE item route + repository + inline-confirm UI). Frameworks present; passed.
-- **Existing coverage after dev-story was strong:** DELETE integration (204 / 404-unknown / 404-malformed), `deleteTodo` unit (204 + non-ok), and a full confirm-flow E2E (confirm-required → cancel-keeps → confirm-removes → reload-gone).
+- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 4.1 completed the E2E suite: added new-session persistence, wired the isolated `test` compose DB (`test:e2e:compose`), removed the skipped smoke placeholder.
+- **Coverage delivered by dev-story:** `persistence.spec.ts` (create survives a fresh `browser.newContext()`); the suite is 76 green, 0 skipped, covering every AD-13 journey.
 
-## 2. Coverage Plan (thin — one real gap)
+## 2. Coverage Plan (one durability gap)
 
-| Target | Level | Priority | Gap closed |
-| --- | --- | --- | --- |
-| Double-delete idempotency | Integration | P2 | delete same id twice → 204 then 404 (no error/500 on the second) |
+The dev-story persistence spec proved *creation* survives a new session. The symmetric guarantee — that a **deletion** is equally durable server-side — wasn't covered:
 
-Not added (low-value / needs deps): a delete-failure UI test (needs fault injection or a component-test harness — same class as the deferred toggle-failure test).
+1. **Deletion durability across a new session (P2).** Added a test: create + delete (with confirm) in session A, then a fresh context confirms the task is absent — proving the removal persisted server-side, not just in session A's client.
 
-## 3. Tests Added
+Not added (deliberately):
+- **Edit/toggle across a new session** — reload-based specs already prove edit/toggle persistence; a new-session variant is marginal over the create + delete session tests.
+- **Running `test:e2e:compose` here** — its `CI=1` step boots a server on :3000 (collides with the session dev server); the DB pipeline (compose up --wait + migrate) is verified, and the full run is for CI/clean env.
 
-- `tests/integration/todos-id-route.test.ts` — +1 (double-delete → 204 then 404).
+## 3. Tests Generated
 
-Suite: **91 Vitest passed** (was 90). E2E unchanged at **7 passing** on Chromium (delete-with-confirm added + verified in dev-story).
+**E2E — `tests/e2e/persistence.spec.ts`** (+1):
+- "a deletion is durable across a brand-new session" — create+delete in one context, fresh context confirms absence.
 
-## 4. Validation & Results
+## 4. Validation
 
-- **Typecheck:** clean. **Lint:** clean.
-- **Vitest:** 91/91 vs real PostgreSQL 18.
-- **Coverage (v8):** All files **92.61% stmts / 94.44% branch** — above the ≥70% floor. Uncovered lines remain the route `INTERNAL` catch blocks (DB-failure fault injection) and the client `parseJson` malformed-body branch; `app/todo-app.tsx` is E2E-covered (Story 4.2 decides UI-coverage strategy).
-- **Epic 1 CRUD coverage is complete:** create/read (1.3), update-text (1.4), toggle (1.5), delete (1.6) — each with real-Postgres integration + a persistence E2E. **7 E2E** total, comfortably past the AD-13 ≥5 floor.
+| Gate | Result |
+| ---- | ------ |
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ clean |
+| Vitest (with `TEST_DATABASE_URL`) | ✅ 156 passed |
+| Playwright (chromium + mobile) | ✅ **78 passed**, 0 skipped (was 76) |
 
-## 5. Assumptions & Risks
+- Deterministic real-DB tests (unique text, position-independent). No new deps; `fileParallelism:false` preserved.
 
-- Delete-failure UI path (error surfaced, task kept) is implemented and mirrors the deferred toggle-failure path; a dedicated test needs a component-test harness — carried under the existing defer.
-- E2E test-DB isolation/cleanup remains deferred to Story 4.1.
+## 5. Handoff
 
-## 6. Next Recommended Workflow
-
-- `code-review` (fresh context) on Story 1.6 — currently `review`.
-- **Epic 1 complete after 1.6 → run `bmad-retrospective` for Epic 1** before starting Epic 2 (instant/polished experience: the single client store, optimistic updates, sort, responsive).
+Story 4.1's E2E suite is complete: all AD-13 journeys covered incl. create + delete durability across new sessions, isolated `test` compose DB wired, zero skipped tests (78 green). Ready for `code-review`. Coverage % gate + a11y audit doc are Story 4.2.

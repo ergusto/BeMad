@@ -8,33 +8,33 @@ test("delete requires confirmation; cancel keeps, confirm removes (persists)", a
   const unique = `e2e delete ${Date.now()}`;
 
   await page.goto("/");
-  await expect(page.getByText(/loading/i)).toHaveCount(0);
+  await expect(page.getByTestId("loading")).toHaveCount(0);
   await page.getByLabel("New task").fill(unique);
-  await page.getByRole("button", { name: /add task/i }).click();
+  await page.getByTestId("add-task").click();
 
   const row = page.locator("li", { hasText: unique });
   await expect(row).toBeVisible();
 
   // Trigger delete → a confirmation step appears (nothing removed yet).
-  await row.getByRole("button", { name: `Delete: ${unique}`, exact: true }).click();
-  await expect(row.getByText("Delete this task?")).toBeVisible();
+  await row.getByTestId("delete").click();
+  await expect(row.getByTestId("confirm-delete")).toBeVisible();
 
   // Cancel → the task is still present, confirmation gone.
   await row
-    .getByRole("button", { name: `Cancel delete: ${unique}`, exact: true })
+    .getByTestId("cancel-delete")
     .click();
   await expect(row).toBeVisible();
-  await expect(row.getByText("Delete this task?")).toHaveCount(0);
+  await expect(row.getByTestId("confirm-delete")).toHaveCount(0);
 
   // Delete again → Confirm → the task disappears.
-  await row.getByRole("button", { name: `Delete: ${unique}`, exact: true }).click();
+  await row.getByTestId("delete").click();
   await row
-    .getByRole("button", { name: `Confirm delete: ${unique}`, exact: true })
+    .getByTestId("confirm-delete")
     .click();
   await expect(page.locator("li", { hasText: unique })).toHaveCount(0);
 
   // Persists across reload.
   await page.reload();
-  await expect(page.getByText(/loading/i)).toHaveCount(0);
+  await expect(page.getByTestId("loading")).toHaveCount(0);
   await expect(page.locator("li", { hasText: unique })).toHaveCount(0);
 });

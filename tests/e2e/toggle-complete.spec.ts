@@ -8,9 +8,9 @@ test("toggle a task complete and active, persisting across reload", async ({
   const unique = `e2e toggle ${Date.now()}`;
 
   await page.goto("/");
-  await expect(page.getByText(/loading/i)).toHaveCount(0);
+  await expect(page.getByTestId("loading")).toHaveCount(0);
   await page.getByLabel("New task").fill(unique);
-  await page.getByRole("button", { name: /add task/i }).click();
+  await page.getByTestId("add-task").click();
 
   const row = page.locator("li", { hasText: unique });
   await expect(row).toBeVisible();
@@ -23,7 +23,7 @@ test("toggle a task complete and active, persisting across reload", async ({
 
   // Persists as completed across reload.
   await page.reload();
-  await expect(page.getByText(/loading/i)).toHaveCount(0);
+  await expect(page.getByTestId("loading")).toHaveCount(0);
   const afterComplete = page.locator("li", { hasText: unique });
   await expect(afterComplete.getByRole("checkbox")).toBeChecked();
   await expect(afterComplete).toHaveAttribute("data-completed", "true");
@@ -34,7 +34,7 @@ test("toggle a task complete and active, persisting across reload", async ({
 
   // Persists as active across reload.
   await page.reload();
-  await expect(page.getByText(/loading/i)).toHaveCount(0);
+  await expect(page.getByTestId("loading")).toHaveCount(0);
   const afterReactivate = page.locator("li", { hasText: unique });
   await expect(afterReactivate.getByRole("checkbox")).not.toBeChecked();
   await expect(afterReactivate).toHaveAttribute("data-completed", "false");

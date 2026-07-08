@@ -131,6 +131,35 @@ describe("todos-client wrapper", () => {
   });
 });
 
+describe("request timeout / network handling (Story 2.2)", () => {
+  it("maps an AbortSignal timeout to a retryable TodoApiError", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new DOMException("timed out", "TimeoutError"),
+    );
+    await expect(fetchTodos()).rejects.toMatchObject({
+      code: "UNKNOWN",
+      message: "The request timed out. Please try again.",
+    });
+  });
+
+  it("maps a network failure to a retryable TodoApiError", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new TypeError("Failed to fetch"),
+    );
+    await expect(createTodo({ text: "a" })).rejects.toMatchObject({
+      code: "UNKNOWN",
+      message: "Network error. Please try again.",
+    });
+  });
+
+  it("attaches an abort signal to every request (timeout bound)", async () => {
+    const spy = mockFetch(Response.json([], { status: 200 }));
+    await fetchTodos();
+    const [, init] = spy.mock.calls[0]!;
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
 describe("client validation mirror (FR-9 parity)", () => {
   it("rejects the same invalid inputs the server rejects", () => {
     expect(createTodoSchema.safeParse({ text: "" }).success).toBe(false);

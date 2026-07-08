@@ -34,3 +34,117 @@ main {
 .todo-done {
   text-decoration: line-through;
 }
+
+/* ── Responsive layout (Story 2.4, FR-13/NFR-5) ──────────────────────────────
+   Presentation only: flex layouts that wrap, long text that wraps, and
+   touch-friendly controls so the app fits phone and desktop with no horizontal
+   scrolling or overlap. */
+
+/* Controls never exceed their container and inherit the body font. Scoped to
+   the app UI so these sizing rules don't leak to unrelated future markup. */
+main input,
+main button,
+main select {
+  box-sizing: border-box;
+  max-width: 100%;
+  font: inherit;
+}
+
+/* Comfortable tap targets on mobile (~44px) — excluding the checkbox, which is
+   sized directly below. */
+main button,
+main select,
+main input:not([type="checkbox"]) {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.6rem;
+}
+
+/* 1.5rem = 24px, the WCAG 2.5.8 (AA) minimum target size. */
+main input[type="checkbox"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+}
+
+/* Add-task form and the edit-in-place form: input grows, controls wrap cleanly
+   on narrow viewports instead of overflowing. */
+main form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+main form input {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+/* Sort control. */
+main label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+
+/* Task list. */
+main ul {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+main li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Any long/unbroken string breaks rather than forcing horizontal overflow. */
+main li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The task text takes the remaining row width; controls sit alongside/wrap. */
+.todo-text {
+  flex: 1 1 8rem;
+}
+
+main li time {
+  font-size: 0.85rem;
+}
+
+/* The edit-in-place form spans the row so its input can grow. */
+main li form {
+  flex: 1 1 100%;
+}
+
+/* ── Voice (Epic 3) ──────────────────────────────────────────────────────────
+   ALL-CAPS is a DISPLAY concern only (FR-20): copy is stored natural-case and
+   uppercased here, so assistive tech reads it normally. */
+.voice {
+  text-transform: uppercase;
+}
+
+/* The deliberate lowercase "quiet aside" beats (e.g. delete-cancel) stay as-is. */
+.voice-quiet {
+  text-transform: none;
+}
+
+/* Voiced placeholders read LOUD without forcing the user's typed text uppercase. */
+main input::placeholder {
+  text-transform: uppercase;
+}
+
+/* Keyboard focus is always clearly visible (WCAG 2.4.7), using a foreground-
+   colour ring that works in light + dark. */
+:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}

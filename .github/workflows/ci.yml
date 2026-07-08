@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Runs the full verification gate (AD-13): typecheck, lint, Vitest unit +
+# integration (against a real Postgres), and the Playwright E2E suite. GitHub
+# Actions sets CI=true, so Playwright boots its own dev server (no reuse) against
+# the same Postgres service the app + migrations use.
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: bemad
+          POSTGRES_PASSWORD: bemad
+          POSTGRES_DB: bemad_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U bemad -d bemad_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://bemad:bemad@localhost:5433/bemad_test
+      TEST_DATABASE_URL: postgres://bemad:bemad@localhost:5433/bemad_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+
+      # Migrate the schema once — needed by the Playwright app server (the app
+      # does not auto-migrate); the integration tests also migrate themselves.
+      - run: npm run db:migrate
+
+      # Vitest unit + integration (TEST_DATABASE_URL is set, so integration
+      # runs) WITH the ≥70% coverage gate (AD-13, Story 4.2). The gate fails the
+      # build below threshold; integration must run here or lib/db coverage drops.
+      - run: npm run test:coverage
+
+      - run: npx playwright install --with-deps
+
+      # Playwright boots its own dev server (CI=true → no reuse) against Postgres.
+      - run: npm run test:e2e
