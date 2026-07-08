@@ -77,7 +77,7 @@ development_status:
   # Epic 4: Verified & Shippable
   epic-4: in-progress
   4-1-complete-the-e2e-suite: done
-  4-2-coverage-accessibility-audit: backlog
+  4-2-coverage-accessibility-audit: done
   4-3-security-performance-review: backlog
   4-4-delivery-documentation: backlog
   epic-4-retrospective: optional

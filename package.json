@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:compose": "docker compose --profile test up -d --wait db-test && DATABASE_URL=postgres://bemad:bemad@localhost:5433/bemad_test npm run db:migrate && CI=1 DATABASE_URL=postgres://bemad:bemad@localhost:5433/bemad_test playwright test",
     "db:generate": "drizzle-kit generate",

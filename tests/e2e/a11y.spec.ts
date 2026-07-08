@@ -14,23 +14,59 @@ const seeded = {
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-// The rotating-voice concept deliberately gives controls a stable aria-label that
-// differs from the voiced visible text — a known WCAG 2.5.3 (Label in Name)
-// trade-off (axe id "label-content-name-mismatch", impact "serious"). We gate on
-// zero CRITICAL (the AC), and zero SERIOUS except that one documented rule.
+// The rotating-voice concept deliberately gives the ACTION CONTROLS a stable
+// aria-label that differs from their voiced visible text — a known WCAG 2.5.3
+// (Label in Name) trade-off (axe id "label-content-name-mismatch", impact
+// "serious"). This allowance is scoped to exactly those rotating controls (by
+// data-testid): a label-in-name mismatch on ANY OTHER control (e.g. the sort
+// select, a checkbox, a future control) still FAILS the audit.
+const LABEL_IN_NAME_ALLOWED_TESTIDS = [
+  "add-task",
+  "retry",
+  "dismiss",
+  "edit",
+  "delete",
+  "save",
+  "cancel-edit",
+  "confirm-delete",
+  "cancel-delete",
+];
+
+// A label-in-name violation is tolerated only if EVERY offending node is one of
+// the allowlisted rotating controls. Match the flagged element's OWN opening tag
+// (not its whole outerHTML, which would include descendants) plus its target
+// selectors, so a real mismatch on an ancestor that merely *contains* an
+// allowlisted control is still caught.
+function isAllowlistedLabelMismatch(node: {
+  html: string;
+  target: unknown[];
+}): boolean {
+  const end = node.html.indexOf(">");
+  const openingTag = end === -1 ? node.html : node.html.slice(0, end + 1);
+  const haystack = `${openingTag} ${node.target.join(" ")}`;
+  return LABEL_IN_NAME_ALLOWED_TESTIDS.some((id) =>
+    haystack.includes(`data-testid="${id}"`),
+  );
+}
+
 async function assertNoBlockingViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+
   const critical = results.violations.filter((v) => v.impact === "critical");
-  const seriousOther = results.violations.filter(
-    (v) => v.impact === "serious" && v.id !== "label-content-name-mismatch",
-  );
+
+  // Serious violations fail — except a label-in-name mismatch that HAS nodes and
+  // whose every node is an allowlisted rotating control (the documented 2.5.3
+  // trade-off). A zero-node violation is treated as blocking (fail closed).
+  const seriousBlocking = results.violations.filter((v) => {
+    if (v.impact !== "serious") return false;
+    if (v.id !== "label-content-name-mismatch") return true;
+    return !(v.nodes.length > 0 && v.nodes.every(isAllowlistedLabelMismatch));
+  });
+
+  expect(critical.map((v) => v.id), "critical a11y violations").toEqual([]);
   expect(
-    critical.map((v) => v.id),
-    "critical a11y violations",
-  ).toEqual([]);
-  expect(
-    seriousOther.map((v) => v.id),
-    "serious a11y violations (excluding documented label-in-name trade-off)",
+    seriousBlocking.map((v) => v.id),
+    "serious a11y violations (excluding documented label-in-name trade-off on rotating controls)",
   ).toEqual([]);
 }
 
