@@ -46,21 +46,21 @@ test("create shows the task optimistically, then reconciles with the server", as
   });
 
   await page.goto("/");
-  await expect(page.getByText("No tasks yet.")).toBeVisible();
+  await expect(page.getByTestId("empty-state")).toBeVisible();
 
   await page.getByLabel("New task").fill("optimistic task");
-  await page.getByRole("button", { name: /add task/i }).click();
+  await page.getByTestId("add-task").click();
 
   // Appears immediately (before the POST resolves) as a non-mutable pending row.
   const row = page.locator("li", { hasText: "optimistic task" });
   await expect(row).toBeVisible();
-  await expect(row.getByText("Saving…")).toBeVisible();
-  await expect(row.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
+  await expect(row.getByTestId("saving")).toBeVisible();
+  await expect(row.getByTestId("edit")).toHaveCount(0);
 
   // Release the server → reconciles into a saved row with controls.
   releasePost();
-  await expect(row.getByText("Saving…")).toHaveCount(0);
-  await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(row.getByTestId("saving")).toHaveCount(0);
+  await expect(row.getByTestId("edit")).toBeVisible();
 });
 
 test("create rollback removes the task, shows an error, and keeps the typed text", async ({
@@ -88,13 +88,13 @@ test("create rollback removes the task, shows an error, and keeps the typed text
   });
 
   await page.goto("/");
-  await expect(page.getByText("No tasks yet.")).toBeVisible();
+  await expect(page.getByTestId("empty-state")).toBeVisible();
 
   await page.getByLabel("New task").fill("doomed task");
-  await page.getByRole("button", { name: /add task/i }).click();
+  await page.getByTestId("add-task").click();
 
   // Rollback: the optimistic row is gone, the error banner is shown...
-  await expect(page.getByText("Create failed")).toBeVisible();
+  await expect(page.getByTestId("mutation-error")).toBeVisible();
   await expect(page.locator("li", { hasText: "doomed task" })).toHaveCount(0);
   // ...and the typed text is retained so the user can retry (FR-10).
   await expect(page.getByLabel("New task")).toHaveValue("doomed task");
@@ -146,7 +146,7 @@ test("toggle applies optimistically, then rolls back on failure", async ({
 
   // Release the (failing) server → snaps back to unchecked + error banner.
   releasePatch();
-  await expect(page.getByText("Toggle failed")).toBeVisible();
+  await expect(page.getByTestId("mutation-error")).toBeVisible();
   await expect(checkbox).not.toBeChecked();
 });
 
@@ -181,21 +181,21 @@ test("edit rollback restores the prior text but keeps the typed draft to retry",
   await page.goto("/");
   await page
     .locator("li", { hasText: seeded.text })
-    .getByRole("button", { name: "Edit", exact: true })
+    .getByTestId("edit")
     .click();
 
   const editInput = page.getByLabel("Edit task");
   await editInput.fill("edited attempt");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByTestId("save").click();
 
   // Rollback: prior text restored in the store; error banner shown; the editor
   // stays open with the typed draft so the user can retry (FR-10).
-  await expect(page.getByText("Edit failed")).toBeVisible();
+  await expect(page.getByTestId("mutation-error")).toBeVisible();
   await expect(editInput).toBeVisible();
   await expect(editInput).toHaveValue("edited attempt");
 
   // Cancel returns the row to its prior, unmodified text.
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByTestId("cancel-edit").click();
   await expect(page.locator("li", { hasText: seeded.text })).toBeVisible();
 });
 
@@ -238,10 +238,10 @@ test("delete removes optimistically, then reinserts the task on failure", async 
   await expect(row).toBeVisible();
 
   await row
-    .getByRole("button", { name: `Delete: ${seeded.text}`, exact: true })
+    .getByTestId("delete")
     .click();
   await page
-    .getByRole("button", { name: `Confirm delete: ${seeded.text}`, exact: true })
+    .getByTestId("confirm-delete")
     .click();
 
   // Optimistic: the row is gone immediately, before the server responds.
@@ -249,7 +249,7 @@ test("delete removes optimistically, then reinserts the task on failure", async 
 
   // Release the (failing) server → the row reappears + error banner.
   releaseDelete();
-  await expect(page.getByText("Delete failed")).toBeVisible();
+  await expect(page.getByTestId("mutation-error")).toBeVisible();
   await expect(page.locator("li", { hasText: seeded.text })).toBeVisible();
 });
 
@@ -290,10 +290,10 @@ test("edit is applied optimistically before the server confirms", async ({
   await page.goto("/");
   await page
     .locator("li", { hasText: seeded.text })
-    .getByRole("button", { name: "Edit", exact: true })
+    .getByTestId("edit")
     .click();
   await page.getByLabel("Edit task").fill("renamed task");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByTestId("save").click();
 
   // Optimistic: editor closes and the list shows the new text while PATCH held.
   await expect(page.getByLabel("Edit task")).toHaveCount(0);

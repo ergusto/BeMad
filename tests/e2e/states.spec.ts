@@ -21,9 +21,9 @@ test("shows the loading state while todos are being fetched", async ({
   });
 
   await page.goto("/");
-  await expect(page.getByText(/loading/i)).toBeVisible();
+  await expect(page.getByTestId("loading")).toBeVisible();
   // Then it resolves to the empty state.
-  await expect(page.getByText("No tasks yet.")).toBeVisible();
+  await expect(page.getByTestId("empty-state")).toBeVisible();
 });
 
 test("shows the empty state when there are no todos", async ({ page }) => {
@@ -40,7 +40,7 @@ test("shows the empty state when there are no todos", async ({ page }) => {
   });
 
   await page.goto("/");
-  await expect(page.getByText("No tasks yet.")).toBeVisible();
+  await expect(page.getByTestId("empty-state")).toBeVisible();
   await expect(page.locator("li")).toHaveCount(0);
 });
 
@@ -62,15 +62,18 @@ test("shows a distinct error state on load failure, and Retry recovers", async (
 
   await page.goto("/");
 
-  // Distinct error state with the server message + a Retry control.
-  await expect(page.getByText("Boom")).toBeVisible();
-  const retry = page.getByRole("button", { name: "Retry", exact: true });
+  // Distinct error state: the surface is shown with VOICED copy (not the raw
+  // server "Boom" message — AD-8), plus a Retry control.
+  const loadError = page.getByTestId("load-error");
+  await expect(loadError).toBeVisible();
+  await expect(loadError).not.toContainText("Boom"); // raw server message never shown
+  const retry = page.getByTestId("retry");
   await expect(retry).toBeVisible();
 
   // Stop failing, retry → the error clears and the app reaches a ready state
   // (the Add-task button is enabled only when status === "ready").
   failing = false;
   await retry.click();
-  await expect(page.getByText("Boom")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /add task/i })).toBeEnabled();
+  await expect(page.getByTestId("load-error")).toHaveCount(0);
+  await expect(page.getByTestId("add-task")).toBeEnabled();
 });

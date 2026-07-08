@@ -10,9 +10,9 @@ test("create a task, see it, and it persists across reload", async ({
   await page.goto("/");
   // Wait for the loading state to clear so the client component has hydrated
   // (and its onSubmit is attached) before we interact.
-  await expect(page.getByText(/loading/i)).toHaveCount(0);
+  await expect(page.getByTestId("loading")).toHaveCount(0);
   await page.getByLabel("New task").fill(unique);
-  await page.getByRole("button", { name: /add task/i }).click();
+  await page.getByTestId("add-task").click();
 
   await expect(page.getByText(unique)).toBeVisible();
 

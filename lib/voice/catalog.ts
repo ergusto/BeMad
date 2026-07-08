@@ -198,6 +198,19 @@ export const VOICE_CATALOG: Record<VoiceKey, readonly string[]> = {
   ],
 };
 
+// Fixed (NON-rotating) voiced copy for surfaces that convey the current
+// SELECTION and therefore must not rotate (FR-17) — the sort control + its
+// options. Sourced from the pack (FR-14) but each stays clear about the ordering
+// (FR-19). Keys for the options match the SortOrder values so the UI can index
+// by the option value directly.
+export const FIXED_COPY = {
+  sortLabel: "Sort the carnage",
+  newest: "Freshest first",
+  oldest: "Oldest first",
+  alphabetical: "A to Z",
+  "active-first": "Unfinished first",
+} as const;
+
 // Client-side bridge from a plain server `error.code` (AD-4) to a voiced key
 // (AD-8). Story 3.3 uses this to voice errors ON THE CLIENT; the server keeps
 // returning plain codes/messages. `"UNKNOWN"` is the client wrapper's fallback

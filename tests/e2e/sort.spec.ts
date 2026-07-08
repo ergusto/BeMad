@@ -52,21 +52,21 @@ test.beforeEach(async ({ page }) => {
 
 test("defaults to newest-first", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByLabel("Sort tasks")).toHaveValue("newest");
+  await expect(page.getByTestId("sort")).toHaveValue("newest");
   // createdAt desc: cherry (Mar), apple (Feb), banana (Jan).
   expect(await visibleOrder(page)).toEqual(["cherry", "apple", "banana"]);
 });
 
 test("switching to oldest-first reorders the list", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("Sort tasks").selectOption("oldest");
-  await expect(page.getByLabel("Sort tasks")).toHaveValue("oldest");
+  await page.getByTestId("sort").selectOption("oldest");
+  await expect(page.getByTestId("sort")).toHaveValue("oldest");
   expect(await visibleOrder(page)).toEqual(["banana", "apple", "cherry"]);
 });
 
 test("switching to alphabetical reorders the list", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("Sort tasks").selectOption("alphabetical");
+  await page.getByTestId("sort").selectOption("alphabetical");
   expect(await visibleOrder(page)).toEqual(["apple", "banana", "cherry"]);
 });
 
@@ -74,7 +74,7 @@ test("switching to active-first groups active tasks before completed", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Sort tasks").selectOption("active-first");
+  await page.getByTestId("sort").selectOption("active-first");
   // active (newest-first): cherry (Mar), banana (Jan); then completed: apple.
   expect(await visibleOrder(page)).toEqual(["cherry", "banana", "apple"]);
 });
@@ -117,7 +117,7 @@ test("a new task is sorted by the active order (newest → top), not just append
   // Default newest. Canonical order appends a create LAST, but the newest sort
   // must place it FIRST — both as the optimistic pending row and after commit.
   await page.getByLabel("New task").fill("zeta task");
-  await page.getByRole("button", { name: /add task/i }).click();
+  await page.getByTestId("add-task").click();
 
   const items = page.locator("ul li");
   await expect(items.first()).toContainText("zeta task"); // pending, sorted to top

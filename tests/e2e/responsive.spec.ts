@@ -83,17 +83,17 @@ test("controls remain visible and usable at a mobile viewport", async ({
   await page.goto("/");
 
   await expect(page.getByLabel("New task")).toBeVisible();
-  await expect(page.getByRole("button", { name: /add task/i })).toBeVisible();
-  await expect(page.getByLabel("Sort tasks")).toBeVisible();
+  await expect(page.getByTestId("add-task")).toBeVisible();
+  await expect(page.getByTestId("sort")).toBeVisible();
 
   const row = page.locator("li", { hasText: "short task" });
   await expect(row.getByRole("checkbox")).toBeVisible();
-  await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(row.getByTestId("edit")).toBeVisible();
   await expect(
-    row.getByRole("button", { name: "Delete: short task", exact: true }),
+    row.getByTestId("delete"),
   ).toBeVisible();
 
   // A control is actually operable (not just visible) at this width.
-  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await row.getByTestId("edit").click();
   await expect(page.getByLabel("Edit task")).toBeVisible();
 });

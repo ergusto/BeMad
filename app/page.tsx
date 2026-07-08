@@ -1,10 +1,10 @@
 import TodoApp from "./todo-app";
 
-// Server Component shell; the interactive list lives in the client TodoApp.
+// Server Component shell; the interactive list + voiced title live in the client
+// TodoApp (inside the VoiceProvider).
 export default function Home() {
   return (
     <main>
-      <h1>BeMad</h1>
       <TodoApp />
     </main>
   );

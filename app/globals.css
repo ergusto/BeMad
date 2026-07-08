@@ -124,3 +124,20 @@ main li time {
 main li form {
   flex: 1 1 100%;
 }
+
+/* ── Voice (Epic 3) ──────────────────────────────────────────────────────────
+   ALL-CAPS is a DISPLAY concern only (FR-20): copy is stored natural-case and
+   uppercased here, so assistive tech reads it normally. */
+.voice {
+  text-transform: uppercase;
+}
+
+/* The deliberate lowercase "quiet aside" beats (e.g. delete-cancel) stay as-is. */
+.voice-quiet {
+  text-transform: none;
+}
+
+/* Voiced placeholders read LOUD without forcing the user's typed text uppercase. */
+main input::placeholder {
+  text-transform: uppercase;
+}

@@ -48,18 +48,18 @@ describe("todoReducer — load lifecycle", () => {
     ).toEqual(ready([]));
   });
 
-  it("load/error → error", () => {
+  it("load/error → error (carries the error code)", () => {
     expect(
       todoReducer(
         { status: "loading" },
-        { type: "load/error", message: "boom" },
+        { type: "load/error", code: "INTERNAL" },
       ),
-    ).toEqual({ status: "error", message: "boom" });
+    ).toEqual({ status: "error", code: "INTERNAL" });
   });
 
   it("load/start (retry) resets to loading from error", () => {
     expect(
-      todoReducer({ status: "error", message: "x" }, { type: "load/start" }),
+      todoReducer({ status: "error", code: "UNKNOWN" }, { type: "load/start" }),
     ).toEqual({ status: "loading" });
   });
 });
@@ -218,7 +218,7 @@ describe("todoReducer — optimistic delete", () => {
 describe("todoReducer — mutation actions are no-ops when not ready", () => {
   const notReady: TodoState[] = [
     { status: "loading" },
-    { status: "error", message: "x" },
+    { status: "error", code: "UNKNOWN" },
   ];
 
   it("create/optimistic is a no-op when not ready", () => {

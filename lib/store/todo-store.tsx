@@ -9,14 +9,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { ErrorCode } from "@/lib/http";
 import type { CreateTodoInput, Todo, UpdateTodoInput } from "@/lib/todos";
 import {
   createTodo,
   deleteTodo,
   fetchTodos,
   updateTodo,
+  TodoApiError,
 } from "@/lib/todos-client";
 import { DEFAULT_SORT, sortEntries, type SortOrder } from "./sort";
+
+/** Client-side error code carried to the UI (voiced there, AD-8). `"UNKNOWN"`
+ *  is the client wrapper's fallback for timeouts/network/unexpected errors. */
+export type ClientErrorCode = ErrorCode | "UNKNOWN";
 
 // AD-14 single client-side owner of the todo collection + its loading/error
 // state, and (Story 2.2) the optimistic-mutation + rollback paradigm (AD-7).
@@ -40,12 +46,14 @@ export function isPending(entry: TodoEntry): entry is PendingTodo {
 export type TodoState =
   | { status: "loading" }
   | { status: "ready"; entries: TodoEntry[] }
-  | { status: "error"; message: string };
+  // Carries the error CODE (not a raw message); the UI maps it to voiced copy
+  // client-side (AD-8, Story 3.3).
+  | { status: "error"; code: ClientErrorCode };
 
 export type TodoAction =
   | { type: "load/start" }
   | { type: "load/success"; todos: Todo[] }
-  | { type: "load/error"; message: string }
+  | { type: "load/error"; code: ClientErrorCode }
   // optimistic create → commit (reconcile) | rollback
   | { type: "create/optimistic"; tempId: string; text: string }
   | { type: "create/commit"; tempId: string; todo: Todo }
@@ -78,7 +86,7 @@ export function todoReducer(state: TodoState, action: TodoAction): TodoState {
     case "load/success":
       return { status: "ready", entries: action.todos };
     case "load/error":
-      return { status: "error", message: action.message };
+      return { status: "error", code: action.code };
   }
 
   // All mutation transitions require a ready list; otherwise no-op.
@@ -158,17 +166,20 @@ export function todoReducer(state: TodoState, action: TodoAction): TodoState {
   }
 }
 
-function errorMessage(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
+/** The API error code, or "UNKNOWN" for non-API/unexpected errors. The UI
+ *  voices it (AD-8); raw messages are never shown to the user. */
+function codeOf(err: unknown): ClientErrorCode {
+  return err instanceof TodoApiError ? err.code : "UNKNOWN";
 }
 
 export interface TodoStore {
   state: TodoState;
   /** True only when loaded with no entries. */
   isEmpty: boolean;
-  /** Last mutation (create/update/delete) failure, or null. Survives the
-   *  optimistic removal of the row that triggered it (e.g. a failed delete). */
-  mutationError: string | null;
+  /** Last mutation (create/update/delete) failure code, or null. Survives the
+   *  optimistic removal of the row that triggered it (e.g. a failed delete).
+   *  The UI maps it to voiced copy (AD-8). */
+  mutationErrorCode: ClientErrorCode | null;
   dismissMutationError: () => void;
   /** Client-owned sort selection (FR-8) and the derived, ordered view of the
    *  entries. `state.entries` stays canonical (creation-order); sorting is
@@ -188,7 +199,8 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(todoReducer, initialState);
   // Mutation errors live outside the reducer: they must persist even after the
   // originating row is optimistically removed, and never change the list status.
-  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [mutationErrorCode, setMutationErrorCode] =
+    useState<ClientErrorCode | null>(null);
   // Sort selection is presentational — like mutationError it lives outside the
   // reducer so it never perturbs the load/optimistic state machine.
   const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT);
@@ -207,10 +219,7 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
       })
       .catch((err: unknown) => {
         if (mountedRef.current && loadIdRef.current === loadId) {
-          dispatch({
-            type: "load/error",
-            message: errorMessage(err, "Failed to load tasks."),
-          });
+          dispatch({ type: "load/error", code: codeOf(err) });
         }
       });
   }
@@ -227,8 +236,8 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
     if (mountedRef.current) dispatch(action);
   }
 
-  function reportError(err: unknown, fallback: string) {
-    if (mountedRef.current) setMutationError(errorMessage(err, fallback));
+  function reportError(err: unknown) {
+    if (mountedRef.current) setMutationErrorCode(codeOf(err));
   }
 
   // Finds the saved todo (and index) for a mutation; null for pending/missing
@@ -243,8 +252,8 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
   const store: TodoStore = {
     state,
     isEmpty: state.status === "ready" && state.entries.length === 0,
-    mutationError,
-    dismissMutationError: () => setMutationError(null),
+    mutationErrorCode,
+    dismissMutationError: () => setMutationErrorCode(null),
     sortOrder,
     setSortOrder,
     // Derived view only — canonical `state.entries` is left untouched.
@@ -253,7 +262,7 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
     retry: load,
     // Optimistic apply → reconcile on success → rollback on failure (AD-7).
     async create(input) {
-      setMutationError(null);
+      setMutationErrorCode(null);
       const tempId = crypto.randomUUID();
       dispatch({ type: "create/optimistic", tempId, text: input.text });
       try {
@@ -261,7 +270,7 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
         safeDispatch({ type: "create/commit", tempId, todo });
       } catch (err) {
         safeDispatch({ type: "create/rollback", tempId });
-        reportError(err, "Failed to create task.");
+        reportError(err);
         throw err;
       }
     },
@@ -271,14 +280,14 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
         // FR-11: cannot mutate a task that has no server id yet.
         throw new Error("Task is not saved yet.");
       }
-      setMutationError(null);
+      setMutationErrorCode(null);
       dispatch({ type: "update/optimistic", id, patch: input });
       try {
         const todo = await updateTodo(id, input);
         safeDispatch({ type: "update/commit", id, todo });
       } catch (err) {
         safeDispatch({ type: "update/rollback", id, prev: found.todo });
-        reportError(err, "Failed to update task.");
+        reportError(err);
         throw err;
       }
     },
@@ -287,7 +296,7 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
       if (!found) {
         throw new Error("Task is not saved yet.");
       }
-      setMutationError(null);
+      setMutationErrorCode(null);
       // Snapshot the ordering before removal so a rollback restores position
       // even if other entries were added/removed while this delete was inflight.
       const order =
@@ -297,7 +306,7 @@ export function TodoStoreProvider({ children }: { children: ReactNode }) {
         await deleteTodo(id);
       } catch (err) {
         safeDispatch({ type: "delete/rollback", todo: found.todo, order });
-        reportError(err, "Failed to delete task.");
+        reportError(err);
         throw err;
       }
     },
