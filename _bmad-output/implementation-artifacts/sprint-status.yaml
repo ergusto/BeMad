@@ -79,7 +79,7 @@ development_status:
   4-1-complete-the-e2e-suite: done
   4-2-coverage-accessibility-audit: done
   4-3-security-performance-review: done
-  4-4-delivery-documentation: backlog
+  4-4-delivery-documentation: done
   epic-4-retrospective: optional
 
 action_items:

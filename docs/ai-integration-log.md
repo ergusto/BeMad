@@ -40,14 +40,46 @@ BeMad follows the **BMAD Method** pipeline: `brief → project-context → PRD �
 
 ---
 
+## Phase 2 — Implementation & QA (complete)
+
+Implementation ran as a **story-by-story loop**, one story per commit, each story taken through the same pipeline:
+
+> `create-story` (context engine) → `dev-story` (red-green implementation) → `bmad-tea automate` (guardrail-test expansion, where applicable) → **adversarial `code-review`** → apply fixes → commit.
+
+Epics 1–4 (18 stories + retrospectives) were delivered this way. See `_bmad-output/implementation-artifacts/sprint-status.yaml` for the ledger and the per-story files for each story's Dev + Review record.
+
+### What worked
+- **The story-context engine** front-loaded architecture guardrails (AD-1…AD-14), file lists, and prior-story learnings into each story file, so `dev-story` rarely picked the wrong library, file, or pattern.
+- **Red-green discipline** (write failing tests first) plus a **single client store with a pure reducer** made most logic node-unit-testable without a React harness.
+- **Per-story commits** (an Epic-1 retro action item) kept the history bisectable and each change reviewable in isolation.
+- **Retro action-items fed the next epic** — e.g. the Epic-2 decision to locate E2E by `data-testid` (decoupled from rotating copy) prevented a whole class of flaky selectors in Epic 3.
+
+### The adversarial review earned its keep (AI catching AI)
+A 3-layer parallel review (Blind Hunter — diff only; Edge Case Hunter — diff + repo; Acceptance Auditor — diff + spec) ran on every story and caught a **real, often self-introduced defect in nearly every one**, e.g.:
+- **Story 2.2:** delete-rollback restored the row at a stale absolute index → corrupted ordering under interleaved ops (fixed with an order-snapshot).
+- **Story 3.1:** the profanity bleep missed inflected forms (regex boundary).
+- **Story 3.2/3.3:** per-surface reroll bug; an unwired `appTitle`.
+- **Story 4.1:** persistence E2E raced optimistic UI vs. the server commit (asserted before the POST/DELETE committed) → added `waitForResponse`.
+- **Story 4.2:** the coverage gate silently **excluded the store reducer** (it lived in a `.tsx` file caught by the `**/*.tsx` exclusion) while the QA doc claimed it was counted → extracted the pure reducer to `lib/store/reducer.ts` so it's genuinely gated.
+- **Story 4.3:** a "chromium-only" perf skip was a **no-op** (both Playwright projects use the chromium engine) so perf ran under mobile emulation too; and a "p95" over 15 samples was just the max sample → fixed the skip (by project name) and added warmup + 40 samples.
+
+**Lesson recorded across retros:** *passing tests ≠ correct.* The adversarial pass, run in fresh context, repeatedly found defects the implementing agent was confident about.
+
+### AI misses vs. human-decisive calls
+- **AI-decisive (with review):** most implementation, test authoring, the reducer/optimistic state machine, the voice rotation, the QA harnesses.
+- **Human-decisive:** scope boundaries (voice in-app only, never in docs/code/logs), the commit-when-asked / never-push-unattended guardrails, resolving WCAG 2.5.3 (stable accessible names vs. rotating voice) as a documented trade-off, and repeatedly choosing *not* to smuggle app-behaviour changes into measure-and-document stories.
+
 ## MCP servers used
-- _TBD._ Assignment targets **Postman MCP** (API contract validation), **Chrome DevTools MCP** (perf/debug), **Playwright MCP** (E2E automation). Not yet wired into this session — to be set up before implementation/QA phases.
+- **Honest status:** MCP servers were **not** materially used to build the app. E2E automation ran via the **Playwright CLI/test runner** (not the Playwright MCP); `context7` was available for library-doc lookups. The assignment named Postman MCP (API contract validation) and Chrome DevTools MCP (perf/debug) as options — these were **not wired** for this build. Performance was measured with Playwright + the in-page `performance` API instead (see `docs/qa/performance.md`); API behaviour was validated by the integration + E2E suites rather than a Postman collection.
 
 ## Limitations encountered
-- _Running list._ So far: AI needs an explicit human boundary when a stylistic instruction ("in the voice of X") could apply either to the product or to the deliverables — it guessed wrong until corrected.
+- AI needs an explicit human boundary when a stylistic instruction ("in the voice of X") could apply to the product or the deliverables — it guessed wrong until corrected.
+- **Training-data staleness on versions:** the model proposed stale runtimes (Node 22, Postgres 17) until web/human verification corrected them to Node 24 LTS / Postgres 18.
+- **Over-confidence in its own tests:** implementing agents marked stories "done" with green suites that the adversarial review then showed were testing the wrong thing (tautological assertions, races, mis-scoped gates). The review gate — not the implementer — was the reliable correctness signal.
+- **Flaky E2E** under real-DB parallelism required deliberate mitigations (unique text, `waitForResponse`, `toBeVisible` waits, `data-testid` locators).
 
 ## Test generation (AI)
-- _TBD in Phase 2._
+- Unit + integration tests were written red-first during `dev-story`; `bmad-tea automate` expanded guardrail coverage where a story added runtime surface. The Playwright suite grew to 15 spec files / 84 tests (41 per project × 2, plus a chromium-only perf spec) covering journeys, optimistic rollback, sort, voice, accessibility (axe), XSS-inertness, and performance. The coverage gate (`npm run test:coverage`, ≥85% logic-layer) enforces the floor. AI-authored tests were repeatedly strengthened by review (e.g. non-identity fixtures, commit-proving waits, real percentiles).
 
 ## Debugging with AI
-- _TBD in Phase 2._
+- Failures were diagnosed from test output + targeted file reads, then fixed within the same loop. Representative fixes: the delete-rollback ordering bug (reasoned from a failing reducer test), the persistence-test race (traced to optimistic-vs-commit timing), the coverage-scope gap (found by cross-referencing the HTML report against the source tree), and the no-op perf skip (found by checking `devices["Pixel 7"].defaultBrowserType`). Web/doc verification (context7 + web) was decisive for version and API-shape questions.

@@ -31,7 +31,9 @@ The AD-13 floor is 70%; the gate is set well above it with headroom below the ~9
 
 Lowest per-file (still well above the floor): the API route handlers `app/api/todos/route.ts` (79% stmts) and `app/api/todos/[id]/route.ts` (84%) — the uncovered lines are defensive `catch`/500 branches. All other logic files (repository, todos-client, reducer, sort, rotation, schemas, voice) are ≥95%.
 
-## Playwright E2E (the UI layer) — 39 tests × 2 projects (chromium + Pixel 7 mobile) = 78
+## Playwright E2E (the UI layer) — 84 tests (41 per project × Chromium + Pixel 7 mobile, plus 2 chromium-only perf)
+
+_The security and performance rows were added in Story 4.3 (after this report's first draft)._
 
 | Spec | Tests | Journey |
 | ---- | ----: | ------- |
@@ -43,7 +45,11 @@ Lowest per-file (still well above the floor): the API route handlers `app/api/to
 | states | 3 | empty / loading / load-error |
 | persistence | 2 | durability across a brand-new session |
 | edit-cancel | 2 | cancel edit restores text |
+| security | 2 | XSS-inert task text (script + onerror), real-DB round-trip |
 | create-view, delete-with-confirm, edit-in-place, toggle-complete, validation | 1 each | core CRUD + validation |
+| performance | 2 | optimistic ≤100 ms + reconcile p95 ≤500 ms (**chromium only**) |
+
+That's 41 non-performance tests per project (82) + 2 chromium-only performance tests = **84 run** (the 2 performance tests are skipped on the mobile project).
 
 ## Notes / enforcement
 
