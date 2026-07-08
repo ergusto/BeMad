@@ -5,3 +5,5 @@
 // build on this pure-data module.
 export * from "./catalog";
 export * from "./bleep";
+export * from "./rotation";
+export * from "./provider";

@@ -69,7 +69,7 @@ development_status:
   # Epic 3: The Torgue Voice & Accessibility
   epic-3: in-progress
   3-1-voice-pack-module-variant-catalog: done
-  3-2-deterministic-rotation-selector-voice-provider: backlog
+  3-2-deterministic-rotation-selector-voice-provider: done
   3-3-wire-all-surfaces-to-the-voice-pack: backlog
   3-4-accessibility-of-rotating-copy-wcag-2-2-aa: backlog
   epic-3-retrospective: optional

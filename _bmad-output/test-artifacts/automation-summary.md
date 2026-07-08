@@ -9,38 +9,38 @@ stepsCompleted:
 lastStep: "step-04-validate-and-summarize"
 lastSaved: "2026-07-08"
 inputDocuments:
-  - "_bmad-output/implementation-artifacts/3-1-voice-pack-module-variant-catalog.md"
+  - "_bmad-output/implementation-artifacts/3-2-deterministic-rotation-selector-voice-provider.md"
   - "_bmad-output/project-context.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-levels-framework.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-priorities-matrix.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-quality.md"
 ---
 
-# Test Automation Expansion — Story 3.1 (Voice pack module & variant catalog)
+# Test Automation Expansion — Story 3.2 (Deterministic rotation selector & voice provider)
 
 **Author:** Murat (Master Test Architect) · **Date:** 2026-07-08 · **Mode:** Create · **Execution:** sequential
 
-_(Supersedes the Story 2.4 automation summary.)_
+_(Supersedes the Story 3.1 automation summary.)_
 
 ## 1. Preflight & Context
 
-- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 3.1 is a **pure-data** module: `lib/voice` catalog (22 keys × 5 variants), the `error.code → key` map, and a pure bleep guard. No rotation (3.2), no wiring/DOM (3.3) — so coverage is inherently **unit-only** (no E2E surface yet).
-- **Coverage delivered by dev-story:** `tests/unit/voice-catalog.test.ts` — ≥5 variants/key, no blank/dupes, no un-bleeped profanity (+ guard self-test), natural-case (FR-20), full error-code coverage (AD-8), and a catalog snapshot.
+- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 3.2 is the rotation **engine**: a pure selector + per-key controller (`lib/voice/rotation.ts`) and a thin client provider/hook (`lib/voice/provider.tsx`). Pickable logic is pure → unit-testable with no DOM harness; the provider renders nothing yet (wired in 3.3).
+- **Coverage delivered by dev-story:** `tests/unit/voice-rotation.test.ts` — selector (no back-to-back repeat, `count===1`→0, reachability, deterministic seeded RNG, edge inputs) + controller (per-key no-repeat, key independence, reachability, deterministic). Seeded mulberry32; no `Math.random`.
 
-## 2. Coverage Plan (one proportional gap)
+## 2. Coverage Plan (one boundary gap)
 
-The dev-story tests already cover the AC surface well. Applying the test-priorities matrix, one worthwhile guard remained, tied to the Epic 2 retro's accessible-name decision:
+Applying the test-priorities matrix to pure logic: the AC surface is well covered. One boundary was worth isolating:
 
-1. **Control-label conciseness (P2).** In Story 3.3 the voiced *visible* text of buttons becomes their **accessible name** (WCAG 2.5.3). If a button variant were long or multi-line, it would make a poor rotating accessible name (FR-19/FR-20). Added a guard capping button-label variants at ≤40 chars, single-line.
+1. **2-variant strict alternation (P2).** With exactly 2 variants the "no back-to-back repeat" rule degenerates to strict ping-pong (each pick forces the other index) — a distinct edge from the ≥3-variant case. Added a test asserting `nextVariantIndex(2, …)` alternates 0,1,0,1…
 
 Not added (deliberately):
-- **Rendering/rotation/wiring tests** — belong to Stories 3.2 (selector) and 3.3 (provider + E2E for voiced surfaces); there is no rendered surface in 3.1.
-- **Semantic-equivalence / "unambiguous" assertions** — not machine-verifiable; enforced by the snapshot + human review of copy.
+- **Provider render / hydration / reroll tests** — deferred to Story 3.3's Playwright E2E (the provider isn't rendered until it wraps the app; a real-browser hydration check needs no new jsdom/RTL dependency).
+- **Distribution-uniformity assertions** — statistically flaky, low value; reachability already proves every index is used.
 
 ## 3. Tests Generated
 
-**Unit — `tests/unit/voice-catalog.test.ts`** (+1 describe):
-- Every control-label key's variants are ≤40 chars and single-line (usable as rotating accessible names).
+**Unit — `tests/unit/voice-rotation.test.ts`** (+1):
+- Strict alternation with exactly 2 variants (both direct `nextVariantIndex(2,0/1)` and a 50-draw ping-pong).
 
 ## 4. Validation
 
@@ -48,12 +48,11 @@ Not added (deliberately):
 | ---- | ------ |
 | `tsc --noEmit` | ✅ clean |
 | `eslint .` | ✅ clean |
-| Vitest (with `TEST_DATABASE_URL`) | ✅ **141 passed** (was 140) |
-| Playwright | ✅ 50 passed, 2 skipped (unchanged; no new surface) |
+| Vitest (with `TEST_DATABASE_URL`) | ✅ **151 passed** (was 150) |
+| Playwright | ✅ 50 passed, 2 skipped (unchanged; provider unrendered) |
 
-- Pure functions + static data — fully deterministic, no DB/DOM.
-- No new dependencies; `fileParallelism:false` preserved.
+- Pure + deterministic (seeded RNG); no DB/DOM; no new dependencies; `fileParallelism:false` preserved.
 
 ## 5. Handoff
 
-Story 3.1's catalog is guarded on structure, bleeping, casing, error-code coverage, control-label usability, and a change-review snapshot. Ready for `code-review`. Rotation-selector tests arrive with Story 3.2; voiced-surface E2E with Story 3.3.
+Story 3.2's rotation engine is guarded on non-repeat, reachability, determinism, per-key independence, and the 1/2/N-variant boundaries. Ready for `code-review`. Provider render + hydration verification arrives with Story 3.3 (voiced-surface E2E).
