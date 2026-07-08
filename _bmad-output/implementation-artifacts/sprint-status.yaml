@@ -42,6 +42,7 @@
 
 generated: 2026-07-02
 last_updated: 2026-07-08
+# Epics 1-4 all done; all retrospectives done. Project complete.
 project: BeMad
 project_key: NOKEY
 tracking_system: file-system
@@ -80,7 +81,7 @@ development_status:
   4-2-coverage-accessibility-audit: done
   4-3-security-performance-review: done
   4-4-delivery-documentation: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
 action_items:
   - epic: 1
@@ -150,12 +151,28 @@ action_items:
   - epic: 3
     action: "Tighten the axe label-content-name-mismatch allowlist to specific rotating control test-ids (from the 3.4 review) — Story 4.2"
     owner: "dev"
-    status: open
+    status: done
   - epic: 3
-    action: "Resolve post-delete focus destination (row unmounts while Confirm focused -> focus falls to body) — Story 4.2 a11y polish"
+    action: "Resolve post-delete focus destination (row unmounts while Confirm focused -> focus falls to body) — needs an app change; deferred out of the measure-and-document Epic 4 stories, carried forward"
     owner: "dev"
     status: open
   - epic: 3
     action: "Standing constraint: WCAG 2.5.3 (Label in Name) vs stable SR names is a deliberate trade-off for the rotating-voice UI (stable aria-labels win); revisit only if voice-input is required"
+    owner: "dev"
+    status: open
+  - epic: 4
+    action: "Verify doc-cited facts against the source at write time (numbers, config keys, file paths); don't propagate figures between docs"
+    owner: "dev"
+    status: open
+  - epic: 4
+    action: "When adding a categorical include/exclude (coverage globs, lint), enumerate the legitimate items it captures before committing it"
+    owner: "dev"
+    status: open
+  - epic: 4
+    action: "For any test with a skip condition or a statistic (p95, sampling), assert it actually skips/measures the intended target (project name vs browser engine; sample size vs percentile rank)"
+    owner: "dev"
+    status: open
+  - epic: 4
+    action: "Resolve post-delete-confirm focus destination as a focused a11y-polish story (parent-level focus coordination in TodoView + an E2E asserting the focus target)"
     owner: "dev"
     status: open
