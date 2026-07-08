@@ -72,7 +72,7 @@ development_status:
   3-2-deterministic-rotation-selector-voice-provider: done
   3-3-wire-all-surfaces-to-the-voice-pack: done
   3-4-accessibility-of-rotating-copy-wcag-2-2-aa: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # Epic 4: Verified & Shippable
   epic-4: backlog
@@ -118,11 +118,11 @@ action_items:
   - epic: 1
     action: "Fuller confirm-dialog a11y (focus-return on cancel + aria-live) — Story 3.4 / 4.2 axe audit"
     owner: "dev"
-    status: open
+    status: done
   - epic: 2
-    action: "DECIDED 2026-07-08: voiced copy strategy = voice everywhere, visible text IS the accessible name (WCAG 2.5.3), migrate E2E control locators to data-testid, voice-pack variants kept unambiguous (FR-15). Implement in Story 3.3 (wiring) + add test-ids as surfaces are voiced; refactor the ~50 E2E name-based locators to test-ids."
+    action: "Voiced copy strategy + data-testid migration (decided at Epic-2 retro). NOTE: Story 3.4's AC then required STABLE accessible names as labels rotate, so 3.4 reverted to stable aria-labels (visible text stays voiced) + a documented WCAG 2.5.3 trade-off. Implemented across 3.3/3.4."
     owner: "dev"
-    status: open
+    status: done
   - epic: 2
     action: "Decompose cross-cutting ACs per-operation/per-surface in dev so aggregate-true/instance-false gaps (e.g. edit-not-optimistic) don't slip"
     owner: "dev"
@@ -137,5 +137,25 @@ action_items:
     status: open
   - epic: 2
     action: "Fold flagged a11y items into the Story 3.4 / 4.2 axe audit (confirm-dialog focus-return + aria-live; tap-target already fixed in 2.4)"
+    owner: "dev"
+    status: done
+  - epic: 3
+    action: "Read dependent later-story ACs before locking a cross-cutting decision (the accessible-name strategy flipped between the Epic-2 retro and Story 3.4's AC)"
+    owner: "dev"
+    status: open
+  - epic: 3
+    action: "Use a per-surface checklist on large-refactor stories so instance-level gaps (unwired surface, missing reroll) don't slip past 'aggregate done'"
+    owner: "dev"
+    status: open
+  - epic: 3
+    action: "Tighten the axe label-content-name-mismatch allowlist to specific rotating control test-ids (from the 3.4 review) — Story 4.2"
+    owner: "dev"
+    status: open
+  - epic: 3
+    action: "Resolve post-delete focus destination (row unmounts while Confirm focused -> focus falls to body) — Story 4.2 a11y polish"
+    owner: "dev"
+    status: open
+  - epic: 3
+    action: "Standing constraint: WCAG 2.5.3 (Label in Name) vs stable SR names is a deliberate trade-off for the rotating-voice UI (stable aria-labels win); revisit only if voice-input is required"
     owner: "dev"
     status: open
