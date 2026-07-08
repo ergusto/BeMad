@@ -9,42 +9,38 @@ stepsCompleted:
 lastStep: "step-04-validate-and-summarize"
 lastSaved: "2026-07-08"
 inputDocuments:
-  - "_bmad-output/implementation-artifacts/3-4-accessibility-of-rotating-copy-wcag-2-2-aa.md"
+  - "_bmad-output/implementation-artifacts/4-1-complete-the-e2e-suite.md"
   - "_bmad-output/project-context.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-levels-framework.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-priorities-matrix.md"
   - ".claude/skills/bmad-testarch-automate/resources/knowledge/test-quality.md"
 ---
 
-# Test Automation Expansion — Story 3.4 (Accessibility of rotating copy, WCAG 2.2 AA)
+# Test Automation Expansion — Story 4.1 (Complete the E2E suite)
 
 **Author:** Murat (Master Test Architect) · **Date:** 2026-07-08 · **Mode:** Create · **Execution:** sequential
 
-_(Supersedes the Story 3.3 automation summary.)_
+_(Supersedes the Story 3.4 automation summary.)_
 
 ## 1. Preflight & Context
 
-- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest + `@axe-core/playwright`). Story 3.4 added stable accessible names (as visible labels rotate), keyboard operability + focus-return, a focus-visible ring, and an axe audit.
-- **Coverage delivered by dev-story:** `tests/e2e/a11y.spec.ts` — axe scans (empty / list / delete-confirm dialog) at WCAG 2.2 A/AA (zero critical, zero serious bar the documented Label-in-Name trade-off); keyboard-only core flow; accessible-name-stability across a re-roll; delete-confirm focus-return.
+- **Stack:** fullstack (Next 16 / React 19 + Playwright + Vitest). Story 4.1 completed the E2E suite: added new-session persistence, wired the isolated `test` compose DB (`test:e2e:compose`), removed the skipped smoke placeholder.
+- **Coverage delivered by dev-story:** `persistence.spec.ts` (create survives a fresh `browser.newContext()`); the suite is 76 green, 0 skipped, covering every AD-13 journey.
 
-## 2. Coverage Plan (two missed surfaces)
+## 2. Coverage Plan (one durability gap)
 
-The dev-story axe scans covered the main states but not two distinct DOM surfaces:
+The dev-story persistence spec proved *creation* survives a new session. The symmetric guarantee — that a **deletion** is equally durable server-side — wasn't covered:
 
-1. **Edit-in-place form open (P1).** A separate surface (edit input + Save/Cancel) not previously axe-scanned. Added a scan with the editor open.
-2. **Load-error state (P1).** The `role="alert"` load-error block (voiced message + Retry) was unscanned. Added a scan of the error state.
+1. **Deletion durability across a new session (P2).** Added a test: create + delete (with confirm) in session A, then a fresh context confirms the task is absent — proving the removal persisted server-side, not just in session A's client.
 
 Not added (deliberately):
-- **Per-row control aria-name stability** — the Add-button stability test already proves the pattern; row controls unmount on activation (edit) so they don't lend themselves to a before/after on the same element.
-- **Manual screen-reader testing** — out of scope for automated E2E.
+- **Edit/toggle across a new session** — reload-based specs already prove edit/toggle persistence; a new-session variant is marginal over the create + delete session tests.
+- **Running `test:e2e:compose` here** — its `CI=1` step boots a server on :3000 (collides with the session dev server); the DB pipeline (compose up --wait + migrate) is verified, and the full run is for CI/clean env.
 
 ## 3. Tests Generated
 
-**E2E — `tests/e2e/a11y.spec.ts`** (+2):
-- axe scan of the edit-in-place form open → no blocking violations.
-- axe scan of the load-error state → no blocking violations.
-
-Also hardened a pre-existing intermittent flake in `voice.spec.ts` (sort-options read before the ready render) with an explicit `toBeVisible()` wait.
+**E2E — `tests/e2e/persistence.spec.ts`** (+1):
+- "a deletion is durable across a brand-new session" — create+delete in one context, fresh context confirms absence.
 
 ## 4. Validation
 
@@ -52,11 +48,11 @@ Also hardened a pre-existing intermittent flake in `voice.spec.ts` (sort-options
 | ---- | ------ |
 | `tsc --noEmit` | ✅ clean |
 | `eslint .` | ✅ clean |
-| Vitest (with `TEST_DATABASE_URL`) | ✅ **156 passed** (unchanged — additions are E2E) |
-| Playwright (chromium + mobile) | ✅ **74 passed**, 2 skipped (was 70) |
+| Vitest (with `TEST_DATABASE_URL`) | ✅ 156 passed |
+| Playwright (chromium + mobile) | ✅ **78 passed**, 0 skipped (was 76) |
 
-- axe gate: zero critical + zero serious (except the documented `label-content-name-mismatch`) across empty / list / dialog / edit / error states. Deterministic via interception; no new deps; `fileParallelism:false` preserved.
+- Deterministic real-DB tests (unique text, position-independent). No new deps; `fileParallelism:false` preserved.
 
 ## 5. Handoff
 
-Story 3.4 is covered by axe scans across all five UI states, keyboard-only flow, focus-return, and aria-name stability. Ready for `code-review`. This completes Epic 3's test surface (the a11y story).
+Story 4.1's E2E suite is complete: all AD-13 journeys covered incl. create + delete durability across new sessions, isolated `test` compose DB wired, zero skipped tests (78 green). Ready for `code-review`. Coverage % gate + a11y audit doc are Story 4.2.
